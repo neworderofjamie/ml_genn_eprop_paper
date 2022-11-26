@@ -66,6 +66,7 @@ parser.add_argument("--train", action="store_true", help="Train model")
 parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
 parser.add_argument("--num-epochs", type=int, default=50, help="Number of training epochs")
 parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
+parser.add_argument("--seed", type=int, default=1234)
 
 parser.add_argument("--hidden-size", type=int, nargs="*")
 parser.add_argument("--hidden-recurrent", choices=["True", "False"], nargs="*")
@@ -193,7 +194,7 @@ with network:
 if args.train:
     # Create EProp compiler and compile
     compiler = EPropCompiler(example_timesteps=int(np.ceil(latest_spike_time)),
-                             losses="sparse_categorical_crossentropy", 
+                             losses="sparse_categorical_crossentropy", rng_seed=args.seed,
                              optimiser="adam", batch_size=args.batch_size)
     compiled_net = compiler.compile(network, name=f"classifier_train_{unique_suffix}")
 
@@ -216,7 +217,7 @@ else:
     network.load((2,), serialiser)
 
     compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
-                                 batch_size=args.batch_size)
+                                 batch_size=args.batch_size, rng_seed=args.seed)
     compiled_net = compiler.compile(network, name=f"classifier_test_{unique_suffix}")
 
     with compiled_net:
