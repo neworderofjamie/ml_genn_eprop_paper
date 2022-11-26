@@ -132,7 +132,7 @@ else:
     
     # Get number of input and output neurons from dataset 
     # and round up outputs to power-of-two
-    num_input = int(np.prod(dataset.sensor_size))
+    num_input = int(np.prod(sensor_size))
     num_output = len(dataset.classes)
 
     # Preprocess spike
