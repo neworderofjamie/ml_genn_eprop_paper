@@ -2,6 +2,7 @@ import csv
 import numpy as np
 
 from argparse import ArgumentParser
+from pygenn.genn_wrapper.CUDABackend import DeviceSelect_MANUAL
 from ml_genn import Connection, Population, Network
 from ml_genn.callbacks import Callback, Checkpoint
 from ml_genn.compilers import InferenceCompiler
@@ -62,6 +63,7 @@ def pad_hidden_layer_argument(arg, num_hidden_layers, context):
 
 
 parser = ArgumentParser()
+parser.add_argument("--device-id", type=int, default=0, help="CUDA device ID")
 parser.add_argument("--train", action="store_true", help="Train model")
 parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
 parser.add_argument("--num-epochs", type=int, default=50, help="Number of training epochs")
@@ -144,6 +146,9 @@ max_spikes = calc_max_spikes(spikes)
 latest_spike_time = calc_latest_spike_time(spikes)
 print(f"Max spikes {max_spikes}, latest spike time {latest_spike_time}")
 
+genn_kwargs = {"selectGPUByDeviceID": True,
+               "deviceSelectMethod": DeviceSelect_MANUAL,
+               "manualDeviceID": args.device_id}
 
 serialiser = Numpy("checkpoints_" + unique_suffix)
 network = Network()
@@ -195,7 +200,7 @@ if args.train:
     # Create EProp compiler and compile
     compiler = EPropCompiler(example_timesteps=int(np.ceil(latest_spike_time)),
                              losses="sparse_categorical_crossentropy", rng_seed=args.seed,
-                             optimiser="adam", batch_size=args.batch_size)
+                             optimiser="adam", batch_size=args.batch_size, **genn_kwargs)
     compiled_net = compiler.compile(network, name=f"classifier_train_{unique_suffix}")
 
     with compiled_net:
@@ -217,7 +222,7 @@ else:
     network.load((2,), serialiser)
 
     compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
-                                 batch_size=args.batch_size, rng_seed=args.seed)
+                                 batch_size=args.batch_size, rng_seed=args.seed, **genn_kwargs)
     compiled_net = compiler.compile(network, name=f"classifier_test_{unique_suffix}")
 
     with compiled_net:
