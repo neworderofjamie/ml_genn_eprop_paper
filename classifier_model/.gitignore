@@ -1,0 +1,12 @@
+# Ignore checkpoints and tonic data
+checkpoints*
+data
+
+# Ignore generated code
+*_CODE
+
+# Ignore windows libraries
+*.dll
+*.exp
+*.lib
+*.pdb
