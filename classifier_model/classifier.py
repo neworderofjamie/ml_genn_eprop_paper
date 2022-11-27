@@ -226,6 +226,11 @@ else:
     compiled_net = compiler.compile(network, name=f"classifier_test_{unique_suffix}")
 
     with compiled_net:
+        # Perform warmup evaluation
+        # **TODO** subset of data
+        compiled_net.evaluate({input: spikes},
+                              {output: labels})
+                                            
         # Evaluate model on numpy dataset
         start_time = perf_counter()
         callbacks = ["batch_progress_bar",
