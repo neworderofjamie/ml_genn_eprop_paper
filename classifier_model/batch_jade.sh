@@ -17,4 +17,4 @@
 #SBATCH --mail-type=END,FAIL
 
 # run the application
-./train_evaluate_args.sh 100
+./train_evaluate_args_jade.sh

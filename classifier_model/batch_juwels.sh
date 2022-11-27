@@ -23,4 +23,4 @@
 #SBATCH --mail-type=END,FAIL
 
 # run the application
-srun ./train_evaluate_args_juwels.sh 100
+srun ./train_evaluate_args_juwels.sh
