@@ -218,8 +218,7 @@ if args.train:
         print(f"Time = {end_time - start_time}s")
 else:
     # Load network state from final checkpoint
-    #network.load((args.num_epochs - 1,), serialiser)
-    network.load((2,), serialiser)
+    network.load((args.num_epochs - 1,), serialiser)
 
     compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
                                  batch_size=args.batch_size, rng_seed=args.seed, **genn_kwargs)
