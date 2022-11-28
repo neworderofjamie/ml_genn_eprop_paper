@@ -1,4 +1,5 @@
 import csv
+import os
 import numpy as np
 
 from argparse import ArgumentParser
@@ -13,6 +14,7 @@ from ml_genn.neurons import (AdaptiveLeakyIntegrateFire, LeakyIntegrate,
 from ml_genn.serialisers import Numpy
 from ml_genn_eprop import EPropCompiler
 
+from glob import glob
 from time import perf_counter
 from ml_genn.utils.data import (calc_latest_spike_time, calc_max_spikes,
                                 log_latency_encode_data, preprocess_tonic_spikes)
@@ -217,8 +219,14 @@ if args.train:
         print(f"Accuracy = {100 * metrics[output].result}%")
         print(f"Time = {end_time - start_time}s")
 else:
+    # Find last checkpoint
+    last_checkpoint = sorted(glob(os.path.join("checkpoints_" + unique_suffix, "*.npy")), 
+                             key=lambda name: int(os.path.basename(name).split("-")[0]))[-1]
+    last_checkpoint = int(os.path.basename(last_checkpoint).split("-")[0])
+    print(f"Loading inference model from checkpoint {last_checkpoint}")
+
     # Load network state from final checkpoint
-    network.load((args.num_epochs - 1,), serialiser)
+    network.load((last_checkpoint,), serialiser)
 
     compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
                                  batch_size=args.batch_size, rng_seed=args.seed, **genn_kwargs)
