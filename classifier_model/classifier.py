@@ -5,13 +5,12 @@ from argparse import ArgumentParser
 from pygenn.genn_wrapper.CUDABackend import DeviceSelect_MANUAL
 from ml_genn import Connection, Population, Network
 from ml_genn.callbacks import Callback, Checkpoint
-from ml_genn.compilers import InferenceCompiler
+from ml_genn.compilers import EPropCompiler, InferenceCompiler
 from ml_genn.connectivity import Dense
 from ml_genn.initializers import Normal
 from ml_genn.neurons import (AdaptiveLeakyIntegrateFire, LeakyIntegrate,
                              LeakyIntegrateFire, SpikeInput)
 from ml_genn.serialisers import Numpy
-from ml_genn_eprop import EPropCompiler
 
 from time import perf_counter
 from ml_genn.utils.data import (calc_latest_spike_time, calc_max_spikes,
@@ -189,7 +188,7 @@ with network:
             Connection(hidden[-2], hidden[-1], Dense(Normal(sd=1.0 / np.sqrt(hidden[-2].shape[0]))))
     
     # Add output population
-    output = Population(LeakyIntegrate(tau_mem=20.0, readout="sum_var", softmax=True),
+    output = Population(LeakyIntegrate(tau_mem=20.0, readout="sum_var", softmax=args.train),
                         num_output)
 
     # Add connection to last hidden layer
