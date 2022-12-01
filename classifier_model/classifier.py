@@ -220,7 +220,8 @@ else:
     network.load((args.num_epochs - 1,), serialiser)
 
     compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
-                                 batch_size=args.batch_size, rng_seed=args.seed, **genn_kwargs)
+                                 batch_size=args.batch_size, rng_seed=args.seed, 
+                                 reset_vars_between_batches=False, **genn_kwargs)
     compiled_net = compiler.compile(network, name=f"classifier_test_{unique_suffix}")
 
     with compiled_net:
