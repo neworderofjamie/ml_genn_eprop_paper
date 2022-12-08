@@ -13,7 +13,7 @@ BAR_WIDTH = 1.0
 BAR_PAD = 1.1
 GROUP_PAD = 2.5
 
-def plot(df, axis):
+def plot_accuracy_bars(df, axis):
     pal = sns.color_palette()
     bar_x = np.arange(df.shape[0]) * GROUP_PAD
     
@@ -77,18 +77,30 @@ for name in glob(os.path.join("results", "test*.csv")):
     data["train_accuracy"].append((last_epoch_train_data["Number correct"] / last_epoch_train_data["Num trials"]).iloc[0])
     data["train_time"].append(last_epoch_train_data["Time"].iloc[0])
 
-# Build dataframe from dictionary
+# Build dataframe from dictionary and sort by config
 df = DataFrame(data=data)
+df = df.sort_values("config")
 
-print(df)
-print(df.iloc[df["test_accuracy"].idxmax()])
-single_layer_df = df[df["num_layers"] == 1]
+# Split dataframe into one and two layer configurations
+one_layer_df = df[df["num_layers"] == 1]
 two_layer_df = df[df["num_layers"] == 2]
 
-fig, axes = plt.subplots(1, 2, sharey=True,
-                         figsize=(plot_settings.double_column_width, 2.0))
+# Extract best performing one and two layer configurations
+best_one_layer = one_layer_df.iloc[df['test_accuracy'].idxmax()]
+best_two_layer = two_layer_df.iloc[df['test_accuracy'].idxmax()]
+print(f"Best one layer config:{best_one_layer['config']} with {best_one_layer['test_accuracy']}%")
+print(f"Best two layer config:{best_two_layer['config']} with {best_two_layer['test_accuracy']}%")
 
-plot(single_layer_df, axes[0])
-plot(two_layer_df, axes[1])
 
+# Create accuracy bar plot
+accuracy_fig, accuracy_axes = plt.subplots(1, 2, sharey=True,
+                                           figsize=(plot_settings.double_column_width, 2.0))
+
+plot_accuracy_bars(one_layer_df, accuracy_axes[0])
+plot_accuracy_bars(two_layer_df, accuracy_axes[1])
+
+accuracy_fig.tight_layout(pad=0)
+
+pareto_fig, pareto_axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
+pareto_axis.scatter(df["test_time"], df["test_accuracy"], s=1)
 plt.show()
