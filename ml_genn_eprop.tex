@@ -50,7 +50,7 @@
 \definecolor{OliveGreen}{rgb}{0.5,0.5,0.0}
 \definecolor{Mulberry}{rgb}{0.77,0.29,0.55}
 \definecolor{Maroon}{rgb}{0.5,0.0,0.0}
-\lstset{language=Python,morekeywords={True,False},showstringspaces=false,basicstyle=\small\ttfamily\bfseries,keywordstyle=\color{Mulberry}\bfseries,identifierstyle=\color{NavyBlue}\bfseries,stringstyle=\ttfamily\color{OliveGreen}\bfseries,commentstyle=\ttfamily\color{Maroon}\bfseries}
+\lstset{language=Python,morekeywords={True,False},showstringspaces=false,basicstyle=\small\ttfamily\bfseries,keywordstyle=\color{Mulberry}\bfseries,identifierstyle=\color{NavyBlue}\bfseries,stringstyle=\ttfamily\color{OliveGreen}\bfseries,commentstyle=\ttfamily\color{Maroon}\bfseries,frame=single,upquote=true,morekeywords={True,False}}
 
 
 %%
@@ -204,7 +204,7 @@ One of the key aims of mlGeNN is to make it simple to define Spiking Neural Netw
 Networks consist of homogenous groups of neurons described by \lstinline{Population} objects connected together with \lstinline{Connection} objects.
 All populations and connections are owned by a \lstinline{Network} which acts as a context manager so a network with two populations of neurons could be simply created like:
 
-\begin{lstlisting}[frame=single,language=Python, upquote=true,morekeywords={True,False}]
+\begin{lstlisting}[language=Python]
 from ml_genn import (Connection, Population,
                      Network)
 
@@ -222,7 +222,7 @@ However, if you wish to override some of the default model parameters, use a mod
 For example, if we wished for the poisson population to emit positive and negative spikes for positive and negative input values and for the integrate-and-fire 
 neuron to have a higher firing threshold we could instantiate \lstinline{PoissonInput} and \lstinline{IntegrateFire} objects ourselves like:
 
-\begin{lstlisting}[frame=single,language=Python, upquote=true,morekeywords={True,False}]
+\begin{lstlisting}[language=Python]
 from ml_genn import (Connection, Population,
                      Network)
 from ml_genn.neurons import (PoissonInput,
@@ -239,13 +239,13 @@ with network:
     Connection(a, b, Dense(1.0))
 \end{lstlisting}
 
-By default, \lstinline{Connection} objects use a 'delta' synapse model where the accumulated weight of incoming spikes is directly injected into neurons. 
+By default, \lstinline{Connection} objects use a `delta' synapse model where the accumulated weight of incoming spikes is directly injected into neurons. 
 However, if you wish to use a somewhat more realistic model where inputs are \emph{shaped} to mimic the dynamics of real ion channels, this can be swapped
 This same general principle is also used for configuring many other aspects of mlGeNN, including loss functions, metrics and readouts. 
 
-Finally, While the flexibility to create networks with any topology is very useful, mlGeNN also provides a \lstinline{SequentialNetwork} wrapper class -- inspired by \lstinline{Sequential} models in Keras -- for specifying common feedforward model more tersely:
+While the flexibility to create networks with any topology is very useful, mlGeNN also provides a \lstinline{SequentialNetwork} wrapper class -- inspired by \lstinline{Sequential} models in Keras -- for specifying common feedforward model more tersely:
 
-\begin{lstlisting}[frame=single,language=Python, upquote=true,morekeywords={True,False}]
+\begin{lstlisting}[language=Python]
 from ml_genn import (InputLayer, Layer,
                      SequentialNetwork)
 
@@ -256,11 +256,70 @@ with network:
               readout="spike_count")
 \end{lstlisting}
 
-\subsection{Compiling models}
-Once you have described a network architecture using the functionality described in the previous section, 
+Finally, in the same way that Keras can easily be extended by subclassing built in classes and implementing new functionality using TensorFlow constructs, mlGeNN can be extended by subclassing  built in classes and providing PyGeNN model descriptions. 
+A full description of the model description syntax is beyond the scope of this work but, is described in more detail in our documentation~\todo{cite} and previous work~\todo{cite pygenn}.
+Nonetheless, the following example illustrates how a minimal Integrate-and-Fire neuron model could be defined for use in mlGeNN:
+
+\begin{lstlisting}[language=Python]
+from ml_genn.neuron import Neuron
+from ml_genn.utils.model import NeuronModel
+from ml_genn.utils.value import ValueDescriptor
+
+genn_model = {
+    "var_name_types": [("V", "scalar")],
+    "sim_code": "$(V) += $(Isyn);",
+    "threshold_condition_code": "$(V) >= 1.0",
+    "reset_code": "$(V) = 0.0;",
+    "is_auto_refractory_required": False}
+
+class IntegrateFire(Neuron):
+    v = ValueDescriptor("V")
+
+    def __init__(self, v = 0.0, softmax = False, 
+                 readout=None):
+        super(IntegrateFire, self).__init__(
+            softmax, readout)
+        self.v = v
+
+    def get_model(self, population, dt):
+        return NeuronModel.from_val_descriptors(
+            genn_model, "V", self, dt)
+\end{lstlisting}
+
+
+
+\subsection{Compiling and using models}
+Once a network structure has been defined using the functionality described in the previous section, mlGeNN provides a range of \emph{compilers} to produce GeNN models which can be used for training or inference.
+The simplest compiler is the \lstinline{InferenceCompiler} which builds a GeNN model with static weights and parallel batching support for efficiently performing inference on an SNN model:
+
+\begin{lstlisting}[language=Python]
+compiler = InferenceCompiler(
+    evaluate_timesteps=1500, batch_size=512)
+
+compiled_net = compiler.compile(network)
+\end{lstlisting}
+
+The resulting \lstinline{compiled_net} object can then be used to evaluate the network on a dataset:
+
+\begin{lstlisting}[language=Python]
+metrics, _  = compiled_net.evaluate({input: spikes},
+                                    {output: labels})
+\end{lstlisting}
+
+By default, the evaluation method calculates sparse categorical accuracy against the labels but mlGeNN provides alternative metrics for regression tasks and custom metrics can be easily implemented.
+\begin{lstlisting}[language=Python]
+compiler = EPropCompiler(
+    example_timesteps=1500,
+    losses="sparse_categorical_crossentropy",
+    optimiser="adam", batch_size=512)
+
+compiled_net = compiler.compile(network)
+\end{lstlisting}
+
 
 \section{Results}
 In order to demonstrate the value of mlGeNN for spike-based ML research, here we present the results of a small exploration of SNN architectures, trained using e-prop~\todo{cite maas} on the DVS gesture dataset which has been recently used to evaluate the EGRU~\todo{cite} and FPTT~\todo{cite} learning rules.
+This dataset was provided by the Tonic library~\todo{cite} and, while mlGeNN does not depend on this library, it includes a \lstinline{preprocess_tonic_spikes} helper function which converts spike trains from Tonic datasets into mlGeNN's internal format.
 
 \begin{figure*}[t]
   \centering
