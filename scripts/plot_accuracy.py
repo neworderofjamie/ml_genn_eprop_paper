@@ -18,9 +18,9 @@ def plot_accuracy_bars(df, axis):
     bar_x = np.arange(df.shape[0]) * GROUP_PAD
     
     # Show bars for train and test accuracy
-    axis.bar(bar_x, df["mean_train_accuracy"] * 100.0, yerr=df["sd_train_accuracy"] * 100.0,
+    axis.bar(bar_x, df["mean_train_accuracy"], yerr=df["sd_train_accuracy"],
              width=BAR_WIDTH, color=pal[0])
-    axis.bar(bar_x + BAR_PAD, df["mean_test_accuracy"] * 100.0, yerr=df["sd_test_accuracy"] * 100.0,
+    axis.bar(bar_x + BAR_PAD, df["mean_test_accuracy"], yerr=df["sd_test_accuracy"],
              width=BAR_WIDTH, color=pal[1])
     
     # Remove axis junk
@@ -42,7 +42,7 @@ for name in glob(os.path.join("results", "test*.csv")):
     # Split name of test filename into components seperated by _
     name_components = os.path.splitext(os.path.basename(name))[0].split("_")
     
-    # **YUCK** dvs-gesture should probably not be _ delimited
+    # **YUCK** dvs-gesture should probably not be _ delimited - stops this generalising
     num_components = len(name_components)
     assert ((num_components - 8) % 3) == 0
     
@@ -74,9 +74,9 @@ for name in glob(os.path.join("results", "test*.csv")):
     data["config"].append("-".join(config))
     data["num_layers"].append(num_layers)
     data["seed"].append(int(name_components[7]))
-    data["test_accuracy"].append((test_data["Number correct"] / test_data["Num trials"]).iloc[0])
+    data["test_accuracy"].append((100.0 * (test_data["Number correct"] / test_data["Num trials"])).iloc[0])
     data["test_time"].append(test_data["Time"].iloc[0])
-    data["train_accuracy"].append((last_epoch_train_data["Number correct"] / last_epoch_train_data["Num trials"]).iloc[0])
+    data["train_accuracy"].append((100.0 * (last_epoch_train_data["Number correct"] / last_epoch_train_data["Num trials"])).iloc[0])
     data["train_time"].append(last_epoch_train_data["Time"].iloc[0])
 
 # Build dataframe from dictionary and sort by config
@@ -106,14 +106,16 @@ print(f"Best two layer config:{best_two_layer['config']} with {best_two_layer['m
 
 
 # Create accuracy bar plot
-accuracy_fig, accuracy_axes = plt.subplots(1, 2, sharey=True,
-                                           figsize=(plot_settings.double_column_width, 2.0))
+dense_accuracy_fig, dense_accuracy_axes = plt.subplots(1, 2, sharey=True,
+                                                       figsize=(plot_settings.double_column_width, 2.0))
 
-plot_accuracy_bars(one_layer_df, accuracy_axes[0])
-plot_accuracy_bars(two_layer_df, accuracy_axes[1])
+plot_accuracy_bars(one_layer_df, dense_accuracy_axes[0])
+plot_accuracy_bars(two_layer_df, dense_accuracy_axes[1])
+dense_accuracy_axes[0].set_title("A", loc="left")
+dense_accuracy_axes[1].set_title("B", loc="left")
+dense_accuracy_fig.tight_layout(pad=0)
 
-accuracy_fig.tight_layout(pad=0)
+if not plot_settings.presentation and not plot_settings.poster:
+    dense_accuracy_fig.savefig("../figures/dense_accuracy.pdf")
 
-pareto_fig, pareto_axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
-pareto_axis.scatter(df["mean_test_time"], df["mean_test_accuracy"], s=1)
 plt.show()

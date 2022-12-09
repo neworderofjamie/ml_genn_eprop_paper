@@ -1,0 +1,9 @@
+# Latex crud
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+
+# Python cache
+**/__pycache__
