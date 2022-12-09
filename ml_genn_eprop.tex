@@ -169,58 +169,33 @@
 \maketitle
 
 \section{Introduction}
-In recent years, several new techniques for directly training spiking neural networks~(SNNs) using gradient-based approaches have been developed.
-The discontinuity of spiking neuron's membrane potentials when they emit a spike is problematic when deriving gradients.
-One approach to work around this problem is to replace the derivative of the membrane potential with a `surrogate gradient'~\citep{Bohte2011,Bellec2018,Zenke2021a}, allowing SNNs to be trained with the same algorithms used to train rate-based Recurrent Neural Network~(RNNs) such as Back Propagation Through Time~(BPTT).
-While BPTT is computationally efficient, because it requires gradients to be stored during the forward pass in order for them to be applied during a backward pass, it has a memory requirement which grows with time preventing it from being applied to long input sequences or used online.
-RTRL~\citep{Williams1989} is an alternative `forward mode' algorithm for training RNNs but, in its general form, it is too computationally expensive to be practical.
-However, if the gradients flowing through the `explicit' recurrent connections are ignored and only those flowing through the `implicit' recurrence represented by the dynamics of individual neurons are considered, much more computationally tractable learning rules can be derived~\citep{Zenke2021}.
-Learning rules of this sort include SuperSpike~\citep{Zenke2018}, eProp~\citep{Bellec2020} and Decolle~\citep{Kaiser2020}.
-However, in order to apply these new spike-based machine learning techniques to larger models and data-sets as well as prototyping algorithms for neuromorphic hardware~\citep{Davies2018,Furber2014,Merolla2014}, new tools are required which can efficiently simulate SNNs on existing hardware. 
-The development of efficient SNN simulators has been a key area of computational neuroscience research for several decades~\citep{carnevale2006neuron, Gewaltig2007, Golosio2021, Akar2019,Yavuz2016} but, these simulators are not well-suited to the types of model and the workflows required for spike-based machine learning research.
+The development of efficient SNN simulators has been a key area of computational neuroscience research for several decades~\citep{carnevale2006neuron, Gewaltig2007, Golosio2021, Akar2019,Yavuz2016}.
+However, these simulators are not well-suited to the types of model and the workflows required for spike-based machine learning research.
 As such, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly, eshraghian2021training,Hazan2018} on top of more familiar tools such as PyTorch.
 However, while libraries like PyTorch are highly-optimised for rate-based models, they does not take advantage of the spatio-temporal sparsity of SNNs which have the potential to enable massive computational savings over rate-based networks~\citep{Yin2021}.
+Specialised neuromorphic hardware~\citep{Davies2018,Furber2014,Merolla2014} can be used to efficiently implement SNNs but, while some consensus is beginning to emerge on the theoretical framework within which biological learning may operate, casting algorithms into hardware always results in a game of catch-up with even the most flexible current neuromorphic systems being capable of implementing only very limited versions of the latest online learning rules~\todo{cite charlotte, melika}. 
 
-While our GeNN simulator~\citep{Yavuz2016,Knight2018,Knight2021} was originally developed for Computational Neuroscience research, its longstanding focus on flexibility and its targeting of GPU accelerators has made it easily adaptable to the needs of spike-based ML.
-Specifically, we have added support for parallel batch simulation of models which allows multiple copies of the model to be run simultaneously to maximise GPU occupancy.
-We have also added support for user-defined ``custom update'' operations which can be used to implement a wide range of functionality including gradient-based optimizers, efficient matrix transpose operations and the reduction of variables across batches.
-In this paper we demonstrate how these new extensions can be used to efficiently implement and train SNN classifiers using eProp~\citep{Bellec2020} on the Spiking Heidelberg Digits~\citep{Cramer2020} and the Spiking Sequential MNIST~\citep{Plank2021} datasets.
+While previous libraries for spike-based ML~\todo{cite spiking jelly, bindsnet, norse, neko} have allowed SNNs to be defined in a familiar environment for ML researchers, they have been implemented on top of libraries like PyTorch.
+When using these libraries, the activity of a population of neurons is typically represented as a vector of rates and, for an SNN, this vector is populated with ones for spiking and zeros for non-spiking neurons. 
+This representation allows one to apply the existing infrastructure of the underlying ML library to SNNs but, as real neurons often spike at comparatively low rates, propagating the activity of inactive neurons through the network leads to unnecessary computation.
+Additionally, the connections between populations of real neurons are sparse and continuously ‘rewired’ during learning23 which, using a standard ML library, would typically be implemented as a weight matrix containing many zeros.
+Both choices are inefficient so, we have developed a new library for spike-based ML which harnesses  GPU-optimised sparse data structures and algorithms provided by our GeNN simulator~\todo{cite ourselves!}.
 
-\begin{figure}[t]
-  \centering
-  \includegraphics{figures/shd_performance.pdf}
-  \caption{Performance comparison of  LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch~\citep{Zenke2021a} on Spiking Heidelberg Digits dataset.
-  Bars signify the mean and error bars the standard deviation over 5~(GeNN) and 10~(PyTorch) simulations.}
-  \label{fig:shd_performance}
-\end{figure}
+We previously presented the first version of mlGeNN~\todo{cite} which provided workflows for converting ANNs trained using TensorFlow~\todo{cite} into SNNs for simulation using GeNN.
+However, as we found, 
 
-\begin{figure}[t]
-  \centering
-  \includegraphics{figures/training_time.pdf}
-  \caption{Training time comparison of LSNNs trained with eProp using GeNN and SNNs trained with BPTT using PyTorch on Spiking Heidelberg Digits dataset. A \SI{12}{\giga\byte} Titan V GPU and a batch size of \num{512} are used for all experiments. Input spike trains are binned to achieve different numbers of timesteps. Missing bars indicate insufficient memory for experiment.}
-  \label{fig:training_time}
-\end{figure}
+\section{mlGeNN}
+\subsection{Model description}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics{figures/lstm_vs_genn.pdf}
-  \caption{Inference time and energy delay product comparison of LSNNs and LSTMs trained on Sequential MNIST~\citep{Plank2021}. 
-  (A) Batch size 1 with Loihi data from \citet{Plank2021}. 
-  (B) Across batch sizes.}
-  \label{fig:lstm_vs_genn}
-\end{figure}
+\subsection{Model compilation}
 
 \section{Results}
-We trained LSNNs of various sizes with feedforward and recurrent connectivity on the Spiking Heidelberg Digits~(SHD)~\citep{Cramer2020} and spiking sequential MNIST~\citep{Plank2021} datasets using eProp with the default parameters~\citep{Bellec2020}.
-We found no considerable differences in the performance of eProp models with \num{256} neurons on the SHD dataset compared to using BPTT~\citep{Zenke2021a}  (figure~\ref{fig:shd_performance}). 
-However, the reduced memory requirement of eProp allows training larger models, and we were able to discover that performance significantly improves for \num{512} neurons. 
-While being able to train networks with high classification accuracy is important, training also needs to be fast.
-Figure~\ref{fig:training_time} shows how the training time for recurrent LSNNs using eProp with GeNN compares against training recurrent LIF networks using BPTT with PyTorch code from \citet{Zenke2021a}.
-For short input sequences, training with GeNN is slower but, the runtime of GeNN simulations increases less with sequence length and, because BPTT requires the state of the model to be recorded every time step, PyTorch cannot train models larger than \num{256} neurons on \num{1370} timestep input sequences with our chosen batch size of \num{512} due to memory constraints.
-Figure~\ref{fig:lstm_vs_genn} compares the inference time and energy delay products~(EDPs) of LSNNs simulated with GeNN against LSTM models running on the same hardware~\citep{Plank2021} as well as LSNNs running on the Loihi neuromorphic chip~\citep{Davies2018}.
-On the same Titan V GPU, LSNNs are faster than LSTMs and have a lower EDP across all batch sizes.
-Compared to using LSTMs, LSNN inference has a much lower arithmetic intensity meaning that, at batch size 1, not only is the CPU code generated by GeNN faster than TensorFlow running on CPU but it is also faster than GeNN running on GPU.
-Finally, although LSNN inference on Loihi has a much lower Energy-Delay Product, inference on both GPU and CPU using GeNN has lower latency.
+In order to demonstrate the usefulness of mlGeNN for spike-based ML research, here we present the results of a small exploration of SNN architectures, trained using e-prop
+\subsection{Accuracy}
+\subsection{Performance}
+\begin{itemize}
+    \item Training time - compare to FPTT
+\end{itemize}
 
 \section{Conclusions}
 While the results we have presented in this paper demonstrate that the approximations behind the eProp learning rule do not necessarily prevent it enablig competitive performane in relatively complex datasets, eProp does have some significant issues.
