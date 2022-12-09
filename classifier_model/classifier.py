@@ -156,6 +156,10 @@ with network:
     input = Population(SpikeInput(max_spikes=args.batch_size * max_spikes),
                        num_input)
     
+    # Add output population
+    output = Population(LeakyIntegrate(tau_mem=20.0, readout="sum_var", softmax=args.train),
+                        num_output)
+
     # Loop through hidden layers
     hidden = []
     for i, (s, r, m) in enumerate(zip(args.hidden_size, 
@@ -180,19 +184,15 @@ with network:
             Connection(hidden[-1], hidden[-1], 
                        Dense(Normal(sd=1.0 / np.sqrt(s))))
        
+        # Add connection to output layer
+        Connection(hidden[-1], output, Dense(Normal(sd=1.0 / np.sqrt(hidden[-1].shape[0]))))
+        
         # If this is first hidden layer, add input connections
         if i == 0:
             Connection(input, hidden[-1], Dense(Normal(sd=1.0 / np.sqrt(num_input))))
         # Otherwise, add connection to previous hidden layer
         else:
             Connection(hidden[-2], hidden[-1], Dense(Normal(sd=1.0 / np.sqrt(hidden[-2].shape[0]))))
-    
-    # Add output population
-    output = Population(LeakyIntegrate(tau_mem=20.0, readout="sum_var", softmax=args.train),
-                        num_output)
-
-    # Add connection to last hidden layer
-    Connection(hidden[-1], output, Dense(Normal(sd=1.0 / np.sqrt(hidden[-1].shape[0]))))
 
 # If we're training model
 if args.train:
