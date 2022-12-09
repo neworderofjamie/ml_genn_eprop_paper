@@ -51,7 +51,9 @@ class CSVTestLog(Callback):
                                   perf_counter() - self.start_time])
         self.file.flush()
                                   
-def pad_hidden_layer_argument(arg, num_hidden_layers, context):
+def pad_hidden_layer_argument(arg, num_hidden_layers, context, allow_empty=False):
+    if len(arg) == 0 and allow_empty:
+        return arg
     if len(arg) == 1:
         return arg * num_hidden_layers
     elif len(arg) != num_hidden_layers:
@@ -72,6 +74,8 @@ parser.add_argument("--seed", type=int, default=1234)
 parser.add_argument("--hidden-size", type=int, nargs="*")
 parser.add_argument("--hidden-recurrent", choices=["True", "False"], nargs="*")
 parser.add_argument("--hidden-model", choices=["lif", "alif"], nargs="*")
+parser.add_argument("--hidden-input-sparsity", type=float, nargs="*")
+parser.add_argument("--hidden-recurrent-sparsity", type=float, nargs="*")
 
 args = parser.parse_args()
 
@@ -90,7 +94,14 @@ args.hidden_recurrent = pad_hidden_layer_argument(args.hidden_recurrent,
 args.hidden_model = pad_hidden_layer_argument(args.hidden_model, 
                                               num_hidden_layers,
                                               "Hidden layer neuron model")
-
+args.hidden_input_sparsity = pad_hidden_layer_argument(args.hidden_input_sparsity, 
+                                                       num_hidden_layers,
+                                                       "Hidden layer input sparsity",
+                                                       True)
+args.hidden_recurrent_sparsity = pad_hidden_layer_argument(args.hidden_recurrent_sparsity, 
+                                                          num_hidden_layers,
+                                                          "Hidden layer recurrent sparsity",
+                                                          True)
 # Figure out unique suffix for model data
 unique_suffix = "_".join(("_".join(str(i) for i in val) if isinstance(val, list) 
                          else str(val))
