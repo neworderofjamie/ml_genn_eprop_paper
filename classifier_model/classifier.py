@@ -54,7 +54,7 @@ class CSVTestLog(Callback):
         self.file.flush()
                                   
 def pad_hidden_layer_argument(arg, num_hidden_layers, context, allow_empty=False):
-    if len(arg) == 0 and allow_empty:
+    if allow_empty and arg is None:
         return arg
     if len(arg) == 1:
         return arg * num_hidden_layers
