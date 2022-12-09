@@ -99,7 +99,9 @@
 %%maintanance
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
-\title{mlGeNN: user-friendly and efficient spike-based Machine Learning}
+\title{mlGeNN: user-friendly and efficient spike-based Machine
+  Learning\\
+User-friendly and efficient spike-based Machine Learning with mlGeNN}
 
 %%
 %% The "author" command and its associated commands are used to define
@@ -180,16 +182,17 @@
 \maketitle
 
 \section{Introduction}
-The development of efficient SNN simulators has been a key area of computational neuroscience research for several decades~\citep{carnevale2006neuron, Gewaltig2007, Golosio2021, Akar2019,Yavuz2016}.
-However, these simulators are not well-suited to the types of model and the workflows required for spike-based machine learning research.
-As such, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly, eshraghian2021training,Hazan2018}\todo{cite neko} on top of frameworks like PyTorch which allow SNNs to be defined in a familiar environment for ML researchers,.
-When using these libraries, the activity of a population of neurons is typically represented as a vector of activations and, for an SNN, this vector is populated with ones for spiking and zeros for non-spiking neurons. 
-This representation allows one to apply the existing infrastructure of the underlying ML library to SNNs but, as real neurons often spike at comparatively low rates, propagating the activity of inactive neurons through the network leads to unnecessary computation.
-Additionally, the connections between populations of real neurons are sparse which, using a standard ML library, would typically be implemented as a weight matrix containing many zeros.
+The development of efficient spiking neural network (SNN) simulators has been a key area of computational neuroscience research for several decades~\citep{carnevale2006neuron, Gewaltig2007, Golosio2021, Akar2019,Yavuz2016}.
+However, the prevalent SNN simulators are not well-suited to the types of models and the workflows required for spike-based machine learning (ML).
+Consequently, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly,eshraghian2021training,Hazan2018}\todo{cite neko} on top of frameworks such as PyTorch~\citep{paszke2019pytorch} and TensorFlow~\citep{TensorFlow} which allow defining SNNs in an environment that is familiar to ML researchers.
+In these libraries, the activity of a population of neurons is typically represented as a vector of activations and, for an SNN, this vector is populated with ones for neurons that are spiking and zeros for quiescent neurons. 
+This representation allows using the existing infrastructure of the underlying ML library for SNNs but, as real neurons often spike at comparatively low rates, propagating the activity of inactive neurons through the network leads to many unnecessary computations.
+Additionally, the connections between populations of neurons can be sparse, in particular in biologically inspired SNNs. In standard ML libraries, sparse connections are typically implemented as a weight matrix containing many zeros.
 
-Both choices are inefficient so, we have developed mlGeNN -- a new library for spike-based ML built on the GPU-optimised sparse data structures and algorithms provided by our GeNN simulator~\todo{cite ourselves!}.
-We previously presented an initial version of mlGeNN~\todo{cite} which provided workflows for converting ANNs trained using TensorFlow~\todo{cite} into SNNs for simulation using GeNN.
-However, while we found that performing inference using our converted SNNs was faster than competing libraries, SNNs are inherantly at a disadvantage for static image classification as by their nature they turn what an ANN library could perform in a single inference step into something that needs simulating for several timesteps.
+To avoid these inefficiencies we have developed mlGeNN -- a new library for spike-based ML built on the GPU-optimised sparse data structures and algorithms provided by our GeNN simulator~\citep{Yavuz2016,Knight2018,Knight2021}.
+We previously presented an initial version of mlGeNN~\citep{Turner2022} which provided workflows for converting ANNs trained using TensorFlow~\citep{TensorFlow} into SNNs that could be simulated using GeNN.
+However, while we found that performing inference using our converted SNNs was faster than with competing libraries, SNNs are inherently at a disadvantage for static image classification as by their nature they turn a single inference step in an ANN library into SNN dynamics across several, often numerous, timesteps.
+In this paper we introduce a second module of mlGeNN focused on training SNNs from scratch. This allows tackling ML problems that are inherently more suitable for SNNs because they contain a temporal dimension, for instance.
 
 \section{mlGeNN}
 \subsection{Describing models}
@@ -257,7 +260,7 @@ with network:
 \end{lstlisting}
 
 Finally, in the same way that Keras can easily be extended by subclassing built in classes and implementing new functionality using TensorFlow constructs, mlGeNN can be extended by subclassing  built in classes and providing PyGeNN model descriptions. 
-A full description of the model description syntax is beyond the scope of this work but, is described in more detail in our documentation~\todo{cite} and previous work~\todo{cite pygenn}.
+A full description of the model description syntax is beyond the scope of this work but, is described in more detail in our documentation~\todo{cite} and previous work~\citep{Knight2021}.
 Nonetheless, the following example illustrates how a minimal Integrate-and-Fire neuron model could be defined for use in mlGeNN:
 
 \begin{lstlisting}[language=Python]
@@ -321,8 +324,8 @@ compiled_net = compiler.compile(network)
 \todo{talk a little about callbacks etc for recording etc}
 
 \section{Results}
-In order to demonstrate the value of mlGeNN for spike-based ML research, here we present the results of a small exploration of SNN architectures, trained using e-prop~\todo{cite maas} on the DVS gesture dataset which has been recently used to evaluate the EGRU~\todo{cite} and FPTT~\todo{cite} learning rules.
-This dataset was provided by the Tonic library~\todo{cite} and, while mlGeNN does not depend on this library, it includes a \lstinline{preprocess_tonic_spikes} helper function which converts spike trains from Tonic datasets into mlGeNN's internal format.
+In order to demonstrate the value of mlGeNN for spike-based ML research, here we present the results of a small exploration of SNN architectures, trained using e-prop~\citep{Bellec2020} on the DVS gesture dataset which has been recently used to evaluate the EGRU~\citep{subramoney2022egru} and FPTT~\citep{yin2021accurate} learning rules.
+This dataset was provided by the Tonic library~\citep{lenz_gregor_2021_5079802} and, while mlGeNN does not depend on this library, it includes a \lstinline{preprocess_tonic_spikes} helper function which converts spike trains from Tonic datasets into mlGeNN's internal format.
 
 \begin{figure*}[t]
   \centering
