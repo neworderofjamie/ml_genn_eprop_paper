@@ -307,6 +307,8 @@ metrics, _  = compiled_net.evaluate({input: spikes},
 \end{lstlisting}
 
 By default, the evaluation method calculates sparse categorical accuracy against the labels but mlGeNN provides alternative metrics for regression tasks and custom metrics can be easily implemented.
+
+\todo{talk a little about eProp}
 \begin{lstlisting}[language=Python]
 compiler = EPropCompiler(
     example_timesteps=1500,
@@ -316,6 +318,7 @@ compiler = EPropCompiler(
 compiled_net = compiler.compile(network)
 \end{lstlisting}
 
+\todo{talk a little about callbacks etc for recording etc}
 
 \section{Results}
 In order to demonstrate the value of mlGeNN for spike-based ML research, here we present the results of a small exploration of SNN architectures, trained using e-prop~\todo{cite maas} on the DVS gesture dataset which has been recently used to evaluate the EGRU~\todo{cite} and FPTT~\todo{cite} learning rules.
@@ -340,12 +343,14 @@ Although this model only has a single hidden layer and around \num{1.3E6} parame
 \begin{itemize}
     \item FPTT shallow recurrent \SI{91.89 \pm 0.16}{\percent} 512 neuron encoder for each channel, feeding into recurrent population of 512 neurons
     \item EGRU two EGRU layers of 512 \SI{88.02}{\percent} (5.5M parameters), two EGRU layers of 1024 \SI{90.22}{\percent} (15.75M parameters)
+    \item Take best architecture and explore sparsity
 \end{itemize}
 
 \subsection{Performance}
 \begin{itemize}
     \item Training time - compare to FPTT \SI{400}{\milli\second} per frame with batch size 64 on some sort of \SI{24}{\giga\byte} GPU
     \item Inference time CPU and GPU - compare to real-time
+    \item Show effect of sparsity on performance
 \end{itemize}
 
 \section{Conclusions}
