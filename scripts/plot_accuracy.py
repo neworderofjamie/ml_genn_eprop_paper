@@ -18,8 +18,10 @@ def plot_accuracy_bars(df, axis):
     bar_x = np.arange(df.shape[0]) * GROUP_PAD
     
     # Show bars for train and test accuracy
-    axis.bar(bar_x, df["mean_train_accuracy"] * 100.0, width=BAR_WIDTH, color=pal[0])
-    axis.bar(bar_x + BAR_PAD, df["mean_test_accuracy"] * 100.0, width=BAR_WIDTH, color=pal[1])
+    axis.bar(bar_x, df["mean_train_accuracy"] * 100.0, yerr=df["sd_train_accuracy"] * 100.0,
+             width=BAR_WIDTH, color=pal[0])
+    axis.bar(bar_x + BAR_PAD, df["mean_test_accuracy"] * 100.0, yerr=df["sd_test_accuracy"] * 100.0,
+             width=BAR_WIDTH, color=pal[1])
     
     # Remove axis junk
     sns.despine(ax=axis)
@@ -28,7 +30,7 @@ def plot_accuracy_bars(df, axis):
     axis.set_xticks(bar_x + (BAR_PAD / 2))
     axis.set_xticklabels(df["config"], rotation=90)
     axis.set_ylabel("Accuracy [%]")
-    axis.set_ylim((0, 100.0))
+    axis.set_ylim((80.0, 100.0))
     
 # Dictionary to hold data
 data = {"config": [], "num_layers": [], "seed": [], 
@@ -91,7 +93,7 @@ df = df.agg(mean_test_accuracy=NamedAgg(column="test_accuracy", aggfunc=np.mean)
             sd_train_accuracy=NamedAgg(column="train_accuracy", aggfunc=np.std),
             mean_train_time=NamedAgg(column="train_time", aggfunc=np.mean),
             sd_train_time=NamedAgg(column="train_time", aggfunc=np.std))
-print(df["mean_test_time"])
+
 # Split dataframe into one and two layer configurations
 one_layer_df = df[df["num_layers"] == 1]
 two_layer_df = df[df["num_layers"] == 2]
@@ -99,8 +101,8 @@ two_layer_df = df[df["num_layers"] == 2]
 # Extract best performing one and two layer configurations
 best_one_layer = one_layer_df.iloc[df['mean_test_accuracy'].idxmax()]
 best_two_layer = two_layer_df.iloc[df['mean_test_accuracy'].idxmax()]
-print(f"Best one layer config:{best_one_layer['config']} with {best_one_layer['mean_test_accuracy']}±{best_one_layer['sd_test_accuracy']}%")
-print(f"Best two layer config:{best_two_layer['config']} with {best_two_layer['mean_test_accuracy']}±{best_two_layer['sd_test_accuracy']}%")
+print(f"Best one layer config:{best_one_layer['config']} with {best_one_layer['mean_test_accuracy']:.2f}±{best_one_layer['sd_test_accuracy']:.2f}%")
+print(f"Best two layer config:{best_two_layer['config']} with {best_two_layer['mean_test_accuracy']:.2f}±{best_two_layer['sd_test_accuracy']:.2f}%")
 
 
 # Create accuracy bar plot
