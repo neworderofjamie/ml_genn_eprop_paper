@@ -1,4 +1,5 @@
 import csv
+import os
 import numpy as np
 
 from argparse import ArgumentParser
@@ -12,6 +13,7 @@ from ml_genn.neurons import (AdaptiveLeakyIntegrateFire, LeakyIntegrate,
                              LeakyIntegrateFire, SpikeInput)
 from ml_genn.serialisers import Numpy
 
+from glob import glob
 from time import perf_counter
 from ml_genn.utils.data import (calc_latest_spike_time, calc_max_spikes,
                                 log_latency_encode_data, preprocess_tonic_spikes)
@@ -52,7 +54,7 @@ class CSVTestLog(Callback):
         self.file.flush()
                                   
 def pad_hidden_layer_argument(arg, num_hidden_layers, context, allow_empty=False):
-    if len(arg) == 0 and allow_empty:
+    if allow_empty and arg is None:
         return arg
     if len(arg) == 1:
         return arg * num_hidden_layers
@@ -227,8 +229,14 @@ if args.train:
         print(f"Accuracy = {100 * metrics[output].result}%")
         print(f"Time = {end_time - start_time}s")
 else:
+    # Find last checkpoint
+    last_checkpoint = sorted(glob(os.path.join("checkpoints_" + unique_suffix, "*.npy")), 
+                             key=lambda name: int(os.path.basename(name).split("-")[0]))[-1]
+    last_checkpoint = int(os.path.basename(last_checkpoint).split("-")[0])
+    print(f"Loading inference model from checkpoint {last_checkpoint}")
+
     # Load network state from final checkpoint
-    network.load((args.num_epochs - 1,), serialiser)
+    network.load((last_checkpoint,), serialiser)
 
     compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
                                  batch_size=args.batch_size, rng_seed=args.seed, 
