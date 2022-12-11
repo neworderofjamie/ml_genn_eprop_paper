@@ -44,9 +44,9 @@ for name in glob(os.path.join("results", "test*.csv")):
     
     # **YUCK** dvs-gesture should probably not be _ delimited - stops this generalising
     num_components = len(name_components)
-    assert ((num_components - 8) % 3) == 0
+    assert ((num_components - 10) % 3) == 0
     
-    num_layers = (num_components - 8) // 3
+    num_layers = (num_components - 10) // 3
     
     layer_size_component_begin = 8
     layer_recurrent_component_begin = layer_size_component_begin + num_layers
@@ -114,6 +114,10 @@ plot_accuracy_bars(two_layer_df, dense_accuracy_axes[1])
 dense_accuracy_axes[0].set_title("A", loc="left")
 dense_accuracy_axes[1].set_title("B", loc="left")
 dense_accuracy_fig.tight_layout(pad=0)
+
+num_timesteps = np.ceil(18456.873)
+
+print(df["mean_train_time"] / num_timesteps)
 
 if not plot_settings.presentation and not plot_settings.poster:
     dense_accuracy_fig.savefig("../figures/dense_accuracy.pdf")
