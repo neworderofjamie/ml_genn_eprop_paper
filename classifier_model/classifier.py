@@ -7,7 +7,7 @@ from pygenn.genn_wrapper.CUDABackend import DeviceSelect_MANUAL
 from ml_genn import Connection, Population, Network
 from ml_genn.callbacks import Callback, Checkpoint
 from ml_genn.compilers import EPropCompiler, InferenceCompiler
-from ml_genn.connectivity import Dense
+from ml_genn.connectivity import Dense, FixedProbability
 from ml_genn.initializers import Normal
 from ml_genn.neurons import (AdaptiveLeakyIntegrateFire, LeakyIntegrate,
                              LeakyIntegrateFire, SpikeInput)
@@ -57,10 +57,11 @@ class CSVTestLog(Callback):
                                   perf_counter() - self.start_time])
         self.file.flush()
                                   
-def pad_hidden_layer_argument(arg, num_hidden_layers, context, allow_empty=False):
-    if allow_empty and arg is None:
-        return arg
-    if len(arg) == 1:
+def pad_hidden_layer_argument(arg, num_hidden_layers, context, default=None):
+    # If argument wasn't specified but there is a default, repeat default for each hidden layer
+    if arg is None and default is not None:
+        return [default] * num_hidden_layers
+    elif len(arg) == 1:
         return arg * num_hidden_layers
     elif len(arg) != num_hidden_layers:
         raise RuntimeError(f"{context} either needs to be specified as a single "
@@ -104,11 +105,11 @@ args.hidden_model = pad_hidden_layer_argument(args.hidden_model,
 args.hidden_input_sparsity = pad_hidden_layer_argument(args.hidden_input_sparsity, 
                                                        num_hidden_layers,
                                                        "Hidden layer input sparsity",
-                                                       True)
+                                                       1.0)
 args.hidden_recurrent_sparsity = pad_hidden_layer_argument(args.hidden_recurrent_sparsity, 
                                                           num_hidden_layers,
                                                           "Hidden layer recurrent sparsity",
-                                                          True)
+                                                          1.0)
 # Figure out unique suffix for model data
 unique_suffix = "_".join(("_".join(str(i) for i in val) if isinstance(val, list) 
                          else str(val))
@@ -181,9 +182,11 @@ with network:
 
     # Loop through hidden layers
     hidden = []
-    for i, (s, r, m) in enumerate(zip(args.hidden_size, 
-                                      args.hidden_recurrent,
-                                      args.hidden_model)):
+    for i, (s, r, m, in_sp, rec_sp) in enumerate(zip(args.hidden_size, 
+                                                 args.hidden_recurrent,
+                                                 args.hidden_model,
+                                                 args.hidden_input_sparsity,
+                                                 args.hidden_recurrent_sparsity)):
         # Add population
         if m == "alif":
             hidden.append(Population(AdaptiveLeakyIntegrateFire(v_thresh=0.6,
@@ -200,18 +203,26 @@ with network:
         
         # If recurrent, add recurrent connections
         if r == "True":
-            Connection(hidden[-1], hidden[-1], 
-                       Dense(Normal(sd=1.0 / np.sqrt(s))))
+            rec_weight = Normal(sd=1.0 / np.sqrt(s)) 
+            rec_connectivity = (Dense(rec_weight) if rec_sp == 1.0 
+                                else FixedProbability(rec_sp, rec_weight))
+            Connection(hidden[-1], hidden[-1], rec_connectivity)
        
         # Add connection to output layer
         Connection(hidden[-1], output, Dense(Normal(sd=1.0 / np.sqrt(hidden[-1].shape[0]))))
         
         # If this is first hidden layer, add input connections
         if i == 0:
-            Connection(input, hidden[-1], Dense(Normal(sd=1.0 / np.sqrt(num_input))))
+            in_weight = Normal(sd=1.0 / np.sqrt(num_input))
+            in_connectivity = (Dense(in_weight) if in_sp == 1.0 
+                               else FixedProbability(in_sp, in_weight, True))
+            Connection(input, hidden[-1], in_connectivity)
         # Otherwise, add connection to previous hidden layer
         else:
-            Connection(hidden[-2], hidden[-1], Dense(Normal(sd=1.0 / np.sqrt(hidden[-2].shape[0]))))
+            in_weight = Normal(sd=1.0 / np.sqrt(hidden[-2].shape[0]))
+            in_connectivity = (Dense(in_weight) if in_sp == 1.0 
+                               else FixedProbability(in_sp, in_weight))
+            Connection(hidden[-2], hidden[-1], in_connectivity)
 
 # If we're training model
 if args.train:

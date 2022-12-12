@@ -99,8 +99,8 @@ one_layer_df = df[df["num_layers"] == 1]
 two_layer_df = df[df["num_layers"] == 2]
 
 # Extract best performing one and two layer configurations
-best_one_layer = one_layer_df.iloc[df['mean_test_accuracy'].idxmax()]
-best_two_layer = two_layer_df.iloc[df['mean_test_accuracy'].idxmax()]
+best_one_layer = one_layer_df.loc[one_layer_df['mean_test_accuracy'].idxmax()]
+best_two_layer = two_layer_df.loc[two_layer_df['mean_test_accuracy'].idxmax()]
 print(f"Best one layer config:{best_one_layer['config']} with {best_one_layer['mean_test_accuracy']:.2f}±{best_one_layer['sd_test_accuracy']:.2f}%")
 print(f"Best two layer config:{best_two_layer['config']} with {best_two_layer['mean_test_accuracy']:.2f}±{best_two_layer['sd_test_accuracy']:.2f}%")
 
