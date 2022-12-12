@@ -202,16 +202,13 @@ In order to express recurrent connectivity within an otherwise directed acylical
 However, when beginning to consider more brain-like models with highly recurrent connectivity, the whole model is likely to become one big recurrent layer which is not likely to be an efficient representation.
 
 By contrast, mlGeNN allows Spiking Neural Networks~(SNNs) with arbitrary topologys to be defined in terms of homogenous groups of neurons described by \lstinline{Population} objects connected together with \lstinline{Connection} objects.
-While this type of model description is common amongst SNN simulators used for computational neuroscience, the key difference in mlGeNN is that -- like in ML frameworks -- the model description is totally agnostic to how it is going to be trained.
+While this type of model description is common amongst SNN simulators used for computational neuroscience, the key difference in mlGeNN is that -- like in ML frameworks -- the model description isPoissonInput totally agnostic to how it is going to be trained.
 \lstinline{Connection} objects don't need to provide a model of how it's weights will be trained and additional learning-rule specific structure such as feedback connections do not need to be added by hand.
 
 All populations and connections are owned by a \lstinline{Network} object which acts as a context manager.
 A network with two populations of neurons could be simply created like:
 
 \begin{lstlisting}[language=Python]
-from ml_genn import (Connection, Population,
-                     Network)
-
 network = Network()
 with network:
     a = Population("poisson_input", 100)
@@ -227,11 +224,6 @@ For example, if we wished for the poisson population to emit positive and negati
 neuron to have a higher firing threshold we could instantiate \lstinline{PoissonInput} and \lstinline{IntegrateFire} objects ourselves like:
 
 \begin{lstlisting}[language=Python]
-from ml_genn import (Connection, Population,
-                     Network)
-from ml_genn.neurons import (PoissonInput,
-                             IntegrateFire)
-
 network = Network()
 with network:
     a = Population(
@@ -249,9 +241,6 @@ However, if you wish to use a somewhat more realistic model where inputs are \em
 While the flexibility to create networks with any topology is very useful, mlGeNN also provides a \lstinline{SequentialNetwork} wrapper class -- inspired by \lstinline{Sequential} models in Keras -- for specifying common feedforward model more tersely:
 
 \begin{lstlisting}[language=Python]
-from ml_genn import (InputLayer, Layer,
-                     SequentialNetwork)
-
 network = SequentialNetwork()
 with network:
     a = InputLayer("poisson_input", 100)
@@ -264,10 +253,6 @@ A full description of the model description syntax is beyond the scope of this w
 Nonetheless, the following example illustrates how a minimal Integrate-and-Fire neuron model could be defined for use in mlGeNN:
 
 \begin{lstlisting}[language=Python]
-from ml_genn.neuron import Neuron
-from ml_genn.utils.model import NeuronModel
-from ml_genn.utils.value import ValueDescriptor
-
 genn_model = {
     "var_name_types": [("V", "scalar")],
     "sim_code": "$(V) += $(Isyn);",
@@ -305,7 +290,7 @@ The resulting \lstinline{compiled_net} object can then be used to evaluate the n
 
 \begin{lstlisting}[language=Python]
 metrics, _  = compiled_net.evaluate(
-    {input: spikes}, {output: labels})
+    {input: inputs}, {output: labels})
 \end{lstlisting}
 
 By default, the evaluation method calculates sparse categorical accuracy against the provided labels but mlGeNN also provides alternative metrics for regression tasks and custom metrics can be easily implemented.
@@ -325,7 +310,7 @@ After compiling with the \lstinline{EPropCompiler}, the \lstinline{compiled_net}
 
 \begin{lstlisting}[language=Python]
 metrics, _  = compiled_net.train(
-    {input: spikes}, {output: labels},
+    {input: inputs}, {output: labels},
     num_epochs=args.num_epochs, shuffle=True)
 \end{lstlisting}
 
@@ -333,7 +318,25 @@ We are also working on an EventProp compiler based on the recent work by \citet{
 
 \subsection{Recording and debugging}
 One of the challenges of working with SNNs, compared to standard ANNs, is that neurons are stateful so the ability to efficiently record and visualise model state is vital for an efficient workflow.
-In machine learning workflows, where models may be trained for millions of timesteps 
+Inspired by Keras, mlGeNN has a callback system which -- as well as being used internally to implement progress bars, trigger processes such as weight updates during model training etc -- can be used by the user to configure the recording of state variables and spikes.
+
+\lstinline{VarRecorder} can be used to record a population state variable over time and \lstinline{SpikeRecorder} can be used to efficiently record spikes (using the efficient system described in \citet{Knight2021}).
+For example here, we record the spikes emitted by the first \lstinline{a} layer and the membrane voltages of the second \lstinline{b} layer of the previous example:
+
+\begin{lstlisting}[language=Python]
+callbacks = [SpikeRecorder(a, key="a_spikes"),
+             VarRecorder(b, "V", key="b_v")]
+metrics, cb_data = compiled_net.evaluate(
+    {input: inputs}, {output: labels},
+    callbacks=callbacks)
+\end{lstlisting}
+
+The \lstinline{key} strings are used to uniquely identify recorded data produced by callbacks and, after the simulation has completed, allow the recorded variables to be retrieved from the \lstinline{cb_data} dictionary returned when evaluating (or training) the model.
+For example the membrane voltages emitted by all neurons during the first example could be accessed using \lstinline{cb_data["b_v"][0]}.
+
+In machine learning workflows where models may be trained for millions of timesteps, it is also important to be able to \emph{filter} what data is recorded to particular areas/stages of training to save memory and reduce overheads.
+Both \lstinline{SpikeRecorder} and \lstinline{VarRecorder} support filtering by neuron or example e.g. \\ \lstinline{SpikeRecorder(a, neuron=np.s_[0::2])} could be used to record spikes from every other neuron and \lstinline{SpikeRecorder(a, example_filter=1000)} could be used to only record during the 1000th example.
+
 
 \section{Results}
 In order to demonstrate the value of mlGeNN for spike-based ML research, here we present the results of a small exploration of SNN architectures, trained using e-prop~\citep{Bellec2020} on the DVS gesture dataset~\citep{amir_low_2017} which has been recently used to evaluate the EGRU~\citep{subramoney2022egru} and FPTT~\citep{yin2021accurate} learning rules.
