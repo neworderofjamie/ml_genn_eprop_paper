@@ -20,11 +20,15 @@ from ml_genn.utils.data import (calc_latest_spike_time, calc_max_spikes,
 
 
 class CSVTrainLog(Callback):
-    def __init__(self, filename, output_pop):
+    def __init__(self, filename, output_pop, resume):
         # Create CSV writer
-        self.file = open(filename, "w")
+        self.file = open(filename, "a" if resume else "w")
         self.csv_writer = csv.writer(self.file, delimiter=",")
-        self.csv_writer.writerow(["Epoch", "Num trials", "Number correct", "Time"])
+
+        # Write header row if we're not resuming from an existing training run
+        if not resume:
+            self.csv_writer.writerow(["Epoch", "Num trials", "Number correct", "Time"])
+
         self.output_pop = output_pop
     
     def on_epoch_begin(self, epoch):
@@ -72,6 +76,7 @@ parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
 parser.add_argument("--num-epochs", type=int, default=50, help="Number of training epochs")
 parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
 parser.add_argument("--seed", type=int, default=1234)
+parser.add_argument("--resume-epoch", type=int, default=None)
 
 parser.add_argument("--hidden-size", type=int, nargs="*")
 parser.add_argument("--hidden-recurrent", choices=["True", "False"], nargs="*")
@@ -107,7 +112,8 @@ args.hidden_recurrent_sparsity = pad_hidden_layer_argument(args.hidden_recurrent
 # Figure out unique suffix for model data
 unique_suffix = "_".join(("_".join(str(i) for i in val) if isinstance(val, list) 
                          else str(val))
-                         for arg, val in vars(args).items() if arg != "train")
+                         for arg, val in vars(args).items()
+                         if arg not in ["train", "resume_epoch"])
 
 # If dataset is MNIST
 spikes = []
@@ -209,6 +215,10 @@ with network:
 
 # If we're training model
 if args.train:
+    # If we should resume traing from a checkpoint, load checkpoint
+    if args.resume_epoch is not None:
+        network.load((args.resume_epoch,), serialiser)
+
     # Create EProp compiler and compile
     compiler = EPropCompiler(example_timesteps=int(np.ceil(latest_spike_time)),
                              losses="sparse_categorical_crossentropy", rng_seed=args.seed,
@@ -218,25 +228,23 @@ if args.train:
     with compiled_net:
         # Evaluate model on SHD
         start_time = perf_counter()
+        start_epoch = 0 if args.resume_epoch is None else (args.resume_epoch + 1)
         callbacks = ["batch_progress_bar", Checkpoint(serialiser),
-                     CSVTrainLog(f"train_output_{unique_suffix}.csv", output)]
+                     CSVTrainLog(f"train_output_{unique_suffix}.csv", output,
+                                 args.resume_epoch is not None)]
         metrics, _  = compiled_net.train({input: spikes},
                                          {output: labels},
                                          num_epochs=args.num_epochs,
-                                         callbacks=callbacks,
-                                         shuffle=True)
+                                         callbacks=callbacks, shuffle=True,
+                                         start_epoch=start_epoch)
         end_time = perf_counter()
         print(f"Accuracy = {100 * metrics[output].result}%")
         print(f"Time = {end_time - start_time}s")
 else:
-    # Find last checkpoint
-    last_checkpoint = sorted(glob(os.path.join("checkpoints_" + unique_suffix, "*.npy")), 
-                             key=lambda name: int(os.path.basename(name).split("-")[0]))[-1]
-    last_checkpoint = int(os.path.basename(last_checkpoint).split("-")[0])
-    print(f"Loading inference model from checkpoint {last_checkpoint}")
+    print(f"Loading inference model from checkpoint {args.num_epochs - 1}")
 
     # Load network state from final checkpoint
-    network.load((last_checkpoint,), serialiser)
+    network.load((args.num_epochs - 1,), serialiser)
 
     compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
                                  batch_size=args.batch_size, rng_seed=args.seed, 
