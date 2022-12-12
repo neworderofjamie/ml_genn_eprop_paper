@@ -138,7 +138,7 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
-    To demonstrate the value of mlGeNN in this space, we present the results of an exploration of shallow classifier architectures for the classification of the DVS gesture dataset. 
+  Intuitive and easy to use application programming interfaces such as Keras have contributed majorly to the rapid acceleration of machine learning with artificial neural networks. Building on our recent work on translating ANNs to SNNs, we here present the mlGeNN interface as an easy way to define, train and test spiking neural networks on our efficient GPU based GeNN framework. We illustrate the use of mlGeNN by investigating the performance of a number of shallow spiking neural networks trained with the e-prop learning rule to recognise hand gestures from the DVS gesture dataset. We find that not only is mlGeNN vastly more convenient to use than the lower level PyGeNN interface, the new freedom to effortlessly and rapidly prototype different network architectures also gave us an unprecendent overview over how e-prop compares to other recently published results on the DVS gesture dataset across archtiectural details. 
 \end{abstract}
 
 %%
@@ -373,16 +373,20 @@ However, interestingly, the best performing model (mean accuracy on test set of 
 \end{itemize}
 
 \section{Conclusions}
-We hope that the mlGeNN library we describe in this paper will be as valuable to the community as it was in generating the results presented in this paper.
-While it is by no means a precise measure, the simplicity and ease of using mlGeNN is illustrated by the fact that the code used for all simulations was less than \num{300} lines whereas, when we used PyGeNN directly in our previous work~\citep{Knight2022} one \num{900} line model was required for training and a seperate \num{500} line model for inference.
+We hope that the mlGeNN library described in this paper will be as valuable to the community as it was in generating the results presented here.
+While it is by no means a precise measure, the simplicity and ease of
+using mlGeNN is illustrated by the fact that the code used for all
+simulations presented here was less than \num{300} lines whereas, when we used PyGeNN directly in our previous work~\citep{Knight2022} one \num{900} line model was required for training and a seperate \num{500} line model for inference.
 
-The results we have presented in this paper demonstrate that the approximation nature of the e-prop learning rule does not necessarily prevent it offering competitive performance on relatively complex datasets.
-However, e-prop does have some significant issues.
-Firstly, e-prop requires time-driven updates which dominates the time taken to train models.
-We demonstrate that by using sparse connectivity, this can be reduced and, in initial unpublished experiments, we have found that by combining sparse connectivity with the Deep-R~\citep{Bellec2018a} rewiring rule, much of the performance lost due to the sparser connectivity can be recovered.
+The e-prop learning rule is an approximation to gradient descent, both in terms of using a surrogate gradient and in neglecting some terms relating to recurrent connections.
+The results we have presented in this paper demonstrate that this approximate nature of the e-prop learning rule does not necessarily prevent it from offering competitive performance on relatively complex datasets.
+However, e-prop has properties that could be seen as disadvantageous for fast and efficient learning and inference.
+Firstly, e-prop requires time-driven updates of synaptic variables which dominates the time taken to train models.
+We demonstrate that by using sparse connectivity, this problem can be reduced and, in initial unpublished experiments, we have found that by combining sparse connectivity with the Deep-R~\citep{Bellec2018a} rewiring rule, much of the performance lost due to the sparser connectivity can be recovered.
 Secondly and unsuprisingly for a visual task, both the original experiments on the DVS gesture dataset~\citep{amir_low_2017} and more recent work using the Decolle and FPTT learning rules~\citep{Kaiser2020,yin2021accurate}, showed that a convolutional SNN can achieve significantly higher performance than shallow recurrent networks.
-However, because the eligibility traces which drive e-prop weight updates are calculated from the product of pre and postsynaptic activity, they cannot be shared across all the synapses in each connection.
-Neither the FPPT~\citep{yin2021accurate} learning rule -- where the additional $\bar{\Phi}_t$ state variable only depends on past weights so can be shared -- and EventProp~\citep{Wunderlich2021} -- which does not require any additional synaptic state -- have these issues so are much more suitable for training convolutional architectures.
+However, because the eligibility traces which drive e-prop weight updates are calculated from the product of pre and postsynaptic activity, they cannot be shared across the corresponding synapses in a convolutional layer.
+Each synapse needs individual state variabes.
+Neither the FPPT~\citep{yin2021accurate} learning rule -- where the additional $\bar{\Phi}_t$ state variable only depends on past weights so can be shared -- nor EventProp~\citep{Wunderlich2021} -- which does not require any additional synaptic state -- have these issues so are much more suitable for training convolutional architectures.
 
 Therefore, based on the promising initial results presented by \citet{NowotnyLoss2022}, we are working to develop an mlGeNN compiler for the EventProp~\citep{Wunderlich2021} learning rule which will allow convolutional models to be trained and to reduce training times by taking advantage of temporal sparsity through purely event-driven training.
 %%
