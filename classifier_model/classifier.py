@@ -288,7 +288,7 @@ if args.train:
         callbacks = ["batch_progress_bar", Checkpoint(serialiser),
                      CSVTrainLog(f"train_output_{unique_suffix}.csv", output,
                                  args.resume_epoch is not None),
-                     ConnectivityCheckpoint(serialise)]
+                     ConnectivityCheckpoint(serialiser)]
         metrics, _  = compiled_net.train({input: spikes},
                                          {output: labels},
                                          num_epochs=args.num_epochs,
