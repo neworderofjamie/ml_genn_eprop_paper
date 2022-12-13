@@ -182,7 +182,7 @@
 \section{Introduction}
 The development of efficient spiking neural network (SNN) simulators has been a key area of computational neuroscience research for several decades~\citep{carnevale2006neuron, Gewaltig2007, Golosio2021, Akar2019,Yavuz2016}.
 However, the prevalent SNN simulators are not well-suited to the types of models and the workflows required for spike-based machine learning (ML).
-Consequently, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly,eshraghian2021training,Hazan2018}\todo{cite neko} on top of frameworks such as PyTorch~\citep{paszke2019pytorch} and TensorFlow~\citep{TensorFlow} which allow defining SNNs in an environment that is familiar to ML researchers.
+Consequently, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly,eshraghian2021training,Hazan2018,zhao_neko_2021} on top of frameworks such as PyTorch~\citep{paszke2019pytorch} and TensorFlow~\citep{TensorFlow} which allow defining SNNs in an environment that is familiar to ML researchers.
 In these libraries, the activity of a population of neurons is typically represented as a vector of activations and, for an SNN, this vector is populated with ones for neurons that are spiking and zeros for quiescent neurons. 
 This representation allows using the existing infrastructure of the underlying ML library for SNNs but, as real neurons often spike at comparatively low rates, propagating the activity of inactive neurons through the network leads to many unnecessary computations.
 Additionally, the connections between populations of neurons can be sparse, in particular in biologically inspired SNNs. In standard ML libraries, sparse connections are typically implemented as a weight matrix containing many zeros which leads to further computational inefficiencies.
@@ -296,6 +296,16 @@ compiled_net = compiler.compile(network)
 \end{lstlisting}
 Note that here again, loss functions and optimisers with default parameters are specified using strings but these are also fully customisable.
 After compiling with the \lstinline{EPropCompiler}, the \lstinline{compiled_net} object can then be used to train the network on a dataset:
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics{figures/dense_accuracy.pdf}
+  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
+  All models were trained for 100 epochs with a batch size of 512.
+  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
+  \label{fig:dense_accuracy}
+\end{figure*}
+
 \begin{lstlisting}[language=Python]
 metrics, _  = compiled_net.train(
     {input: inputs}, {output: labels},
@@ -321,21 +331,11 @@ For example, the membrane voltages emitted by all neurons during the presentatio
 In machine learning workflows, where models may be trained for millions of timesteps, it is also important to be able to \emph{filter} what data is recorded to particular areas/stages of training to save memory and reduce overheads.
 Both \lstinline{SpikeRecorder} and \lstinline{VarRecorder} support filtering by neuron or example, e.g. \\ \lstinline{SpikeRecorder(a, neuron=np.s_[0::2])} could be used to record spikes from every other neuron and \lstinline{SpikeRecorder(a, example_filter=1000)} could be used to only record during the 1000th example.
 
-
 \section{Results}
 In order to demonstrate the value of mlGeNN for spike-based ML research, we here present the results of a small exploration of SNN architectures, trained using e-prop~\citep{Bellec2020} on the DVS gesture dataset~\citep{amir_low_2017}, which has recently been used to evaluate the EGRU~\citep{subramoney2022egru} and FPTT~\citep{yin2021accurate} learning rules.
 This dataset consists of \num{1342} recordings of \num{11} different hand and arm gestures, collected from \num{29} subjects under three different lighting condition using a DVS 128 event-based camera~\citep{lichtsteiner_128times128_2008}.
 We used the Tonic library~\citep{lenz_gregor_2021_5079802} to access the dataset and spatially downsample the events to $32\times32$.
 While mlGeNN does not depend on Tonic, it includes a \lstinline{preprocess_tonic_spikes} helper function which converts spike trains from Tonic datasets into mlGeNN's internal format.
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics{figures/dense_accuracy.pdf}
-  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
-  All models were trained for 100 epochs with a batch size of 512.
-  Bars signify the mean and error bars the standard deviation for 5 training runs with different seeds. Results are labeled with the network architecture, where ``ALIF''/''LIF'' denotes the neuron type, the subsequent number the number of neurons in the layer and ``F''/``R'' indicate a feedforward or recurrent layer, respectively.}
-  \label{fig:dense_accuracy}
-\end{figure*}
 
 \subsection{Accuracy}
 Figure~\ref{fig:dense_accuracy} shows the accuracy of a wide selection of one and two layer classifier models trained with e-prop.
@@ -348,6 +348,14 @@ Interestingly, similar to the architecture employed by \citet{yin2021accurate}, 
 While this performance is slightly lower than the \SI{91.89 \pm 0.16}{\percent} reported by \citet{yin2021accurate}, our model has approximately a third the number of parameters (\num{0.66e6} vs \num{1.8e6}).
 
 One of the significant advantages of mlGeNN is that it can exploit sparse connectivity to reduce training and inference time so, in the final part of our architectural exploration, we explore the effect of sparsity on the performance of our two best performing models (ALIF512R and ALIF256F-ALIF256R).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics{figures/performance.pdf}
+  \caption{Throughput of inference and training best two models on the DVS gesture dataset~\citep{amir_low_2017}.
+  GPU training was performed with a batch size of 512 and inference with a batch size of 264 (the full size of the test set).}
+  \label{fig:performance}
+\end{figure}
 
 \subsection{Performance}
 \begin{itemize}

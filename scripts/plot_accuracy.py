@@ -36,15 +36,15 @@ data = {"config": [], "num_layers": [], "seed": [],
         "train_accuracy": [], "train_time": []}
 
 # Loop through test files (signifies complete experiments)
-for name in glob(os.path.join("results", "test*.csv")):
+for name in glob(os.path.join("results", "test_output_*.csv")):
     # Split name of test filename into components seperated by _
     name_components = os.path.splitext(os.path.basename(name))[0].split("_")
     
     # **YUCK** dvs-gesture should probably not be _ delimited - stops this generalising
     num_components = len(name_components)
-    assert ((num_components - 10) % 3) == 0
+    assert ((num_components - 8) % 5) == 0
     
-    num_layers = (num_components - 10) // 3
+    num_layers = (num_components - 8) // 5
     
     layer_size_component_begin = 8
     layer_recurrent_component_begin = layer_size_component_begin + num_layers
@@ -65,8 +65,13 @@ for name in glob(os.path.join("results", "test*.csv")):
 
     # Read test output CSV
     test_data = read_csv(name, delimiter=",")
-    assert test_data.shape[0] == 1
     
+    if "Epoch" in test_data:
+        last_epoch_test_data = test_data[test_data["Epoch"] == 99]
+    else:
+        last_epoch_test_data = test_data
+    assert last_epoch_test_data.shape[0] == 1
+
     # Read corresponding training output and extract data from last epoch
     train_name = "train_output_" + "_".join(name_components[2:])
     train_data = read_csv(os.path.join("results", train_name) + ".csv", delimiter=",")
@@ -78,8 +83,8 @@ for name in glob(os.path.join("results", "test*.csv")):
         data["config"].append("-".join(config))
         data["num_layers"].append(num_layers)
         data["seed"].append(int(name_components[7]))
-        data["test_accuracy"].append((100.0 * (test_data["Number correct"] / test_data["Num trials"])).iloc[0])
-        data["test_time"].append(test_data["Time"].iloc[0])
+        data["test_accuracy"].append((100.0 * (last_epoch_test_data["Number correct"] / last_epoch_test_data["Num trials"])).iloc[0])
+        data["test_time"].append(last_epoch_test_data["Time"].iloc[0])
         data["train_accuracy"].append((100.0 * (last_epoch_train_data["Number correct"] / last_epoch_train_data["Num trials"])).iloc[0])
         data["train_time"].append(last_epoch_train_data["Time"].iloc[0])
 

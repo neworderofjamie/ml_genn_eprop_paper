@@ -73,6 +73,7 @@ def pad_hidden_layer_argument(arg, num_hidden_layers, context, default=None):
 parser = ArgumentParser()
 parser.add_argument("--device-id", type=int, default=0, help="CUDA device ID")
 parser.add_argument("--train", action="store_true", help="Train model")
+parser.add_argument("--cpu", action="store_true", help="Use CPU for inference")
 parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
 parser.add_argument("--num-epochs", type=int, default=50, help="Number of training epochs")
 parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
@@ -114,7 +115,7 @@ args.hidden_recurrent_sparsity = pad_hidden_layer_argument(args.hidden_recurrent
 unique_suffix = "_".join(("_".join(str(i) for i in val) if isinstance(val, list) 
                          else str(val))
                          for arg, val in vars(args).items()
-                         if arg not in ["train", "resume_epoch"])
+                         if arg not in ["train", "cpu", "resume_epoch"])
 
 # If dataset is MNIST
 spikes = []
@@ -226,6 +227,8 @@ with network:
 
 # If we're training model
 if args.train:
+    assert not args.cpu
+
     # If we should resume traing from a checkpoint, load checkpoint
     if args.resume_epoch is not None:
         network.load((args.resume_epoch,), serialiser)
@@ -254,11 +257,15 @@ if args.train:
 else:
     print(f"Loading inference model from checkpoint {args.num_epochs - 1}")
 
+    # Use CPU backend if desired
+    if args.cpu:
+        genn_kwargs["backend"]="SingleThreadedCPU"
+
     # Load network state from final checkpoint
     network.load((args.num_epochs - 1,), serialiser)
 
     compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
-                                 batch_size=args.batch_size, rng_seed=args.seed, 
+                                 batch_size=1 if args.cpu else args.batch_size, rng_seed=args.seed, 
                                  reset_vars_between_batches=False, **genn_kwargs)
     compiled_net = compiler.compile(network, name=f"classifier_test_{unique_suffix}")
 
