@@ -30,7 +30,7 @@ class CSVTrainLog(Callback):
             self.csv_writer.writerow(["Epoch", "Num trials", "Number correct", "Time"])
 
         self.output_pop = output_pop
-    
+
     def on_epoch_begin(self, epoch):
         self.start_time = perf_counter()
 
@@ -41,22 +41,24 @@ class CSVTrainLog(Callback):
         self.file.flush()
 
 class CSVTestLog(Callback):
-    def __init__(self, filename, output_pop):
+    def __init__(self, filename, epoch, resume, output_pop):
         # Create CSV writer
-        self.file = open(filename, "w")
+        self.file = open(filename, "a" if resume else "w")
         self.csv_writer = csv.writer(self.file, delimiter=",")
-        self.csv_writer.writerow(["Num trials", "Number correct", "Time"])
+        if not resume:
+            self.csv_writer.writerow(["Epoch", "Num trials", "Number correct", "Time"])
+        self.epoch = epoch
         self.output_pop = output_pop
-    
+
     def on_test_begin(self):
         self.start_time = perf_counter()
 
     def on_test_end(self, metrics):
         m = metrics[self.output_pop]
-        self.csv_writer.writerow([m.total, m.correct, 
+        self.csv_writer.writerow([self.epoch, m.total, m.correct, 
                                   perf_counter() - self.start_time])
         self.file.flush()
-                                  
+
 def pad_hidden_layer_argument(arg, num_hidden_layers, context, default=None):
     # If argument wasn't specified but there is a default, repeat default for each hidden layer
     if arg is None and default is not None:
@@ -69,10 +71,37 @@ def pad_hidden_layer_argument(arg, num_hidden_layers, context, default=None):
     else:
         return arg
 
+def inference(genn_kwargs, args, network, serialiser, latest_spike_time, epoch, resume):
+    # Load network state from final checkpoint
+    network.load((epoch,), serialiser)
+
+    compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
+                                 batch_size=1 if args.cpu else args.batch_size, rng_seed=args.seed,
+                                 reset_vars_between_batches=False, **genn_kwargs)
+    compiled_net = compiler.compile(network, name=f"classifier_test_{unique_suffix}")
+
+    with compiled_net:
+        # Perform warmup evaluation
+        # **TODO** subset of data
+        compiled_net.evaluate({input: spikes},
+                              {output: labels})
+
+        # Evaluate model on numpy dataset
+        start_time = perf_counter()
+        callbacks = ["batch_progress_bar",
+                     CSVTestLog(f"test_output_{unique_suffix}.csv", epoch, resume, output)]
+        metrics, _  = compiled_net.evaluate({input: spikes},
+                                            {output: labels},
+                                            callbacks=callbacks)
+        end_time = perf_counter()
+        print(f"Accuracy = {100 * metrics[output].result}%")
+        print(f"Time = {end_time - start_time}s")
 
 parser = ArgumentParser()
 parser.add_argument("--device-id", type=int, default=0, help="CUDA device ID")
 parser.add_argument("--train", action="store_true", help="Train model")
+parser.add_argument("--cpu", action="store_true", help="Use CPU for inference")
+parser.add_argument("--test-all", action="store_true", help="Test all checkpoints up to num epochs")
 parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
 parser.add_argument("--num-epochs", type=int, default=50, help="Number of training epochs")
 parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
@@ -114,7 +143,7 @@ args.hidden_recurrent_sparsity = pad_hidden_layer_argument(args.hidden_recurrent
 unique_suffix = "_".join(("_".join(str(i) for i in val) if isinstance(val, list) 
                          else str(val))
                          for arg, val in vars(args).items()
-                         if arg not in ["train", "resume_epoch"])
+                         if arg not in ["train", "cpu", "resume_epoch", "test_all"])
 
 # If dataset is MNIST
 spikes = []
@@ -123,7 +152,7 @@ num_input = None
 num_output = None
 if args.dataset == "mnist":
     import mnist
-    
+
     # Latency encode MNIST digits
     num_input = 28 * 28
     num_output = 10
@@ -148,7 +177,7 @@ else:
         transform = Compose([Downsample(spatial_factor=0.25)])
         dataset = DVSGesture(save_to='./data', train=args.train, transform=transform)
         sensor_size = (32, 32, 2)
-    
+
     # Get number of input and output neurons from dataset 
     # and round up outputs to power-of-two
     num_input = int(np.prod(sensor_size))
@@ -200,17 +229,17 @@ with network:
                                                         relative_reset=True,
                                                         integrate_during_refrac=True),
                                      s))
-        
+
         # If recurrent, add recurrent connections
         if r == "True":
             rec_weight = Normal(sd=1.0 / np.sqrt(s)) 
             rec_connectivity = (Dense(rec_weight) if rec_sp == 1.0 
                                 else FixedProbability(rec_sp, rec_weight))
             Connection(hidden[-1], hidden[-1], rec_connectivity)
-       
+
         # Add connection to output layer
         Connection(hidden[-1], output, Dense(Normal(sd=1.0 / np.sqrt(hidden[-1].shape[0]))))
-        
+
         # If this is first hidden layer, add input connections
         if i == 0:
             in_weight = Normal(sd=1.0 / np.sqrt(num_input))
@@ -226,6 +255,8 @@ with network:
 
 # If we're training model
 if args.train:
+    assert not args.cpu
+
     # If we should resume traing from a checkpoint, load checkpoint
     if args.resume_epoch is not None:
         network.load((args.resume_epoch,), serialiser)
@@ -248,33 +279,20 @@ if args.train:
                                          num_epochs=args.num_epochs,
                                          callbacks=callbacks, shuffle=True,
                                          start_epoch=start_epoch)
+        compiled_net.save_connectivity((args.num_epochs - 1,), serialiser)
         end_time = perf_counter()
         print(f"Accuracy = {100 * metrics[output].result}%")
         print(f"Time = {end_time - start_time}s")
 else:
     print(f"Loading inference model from checkpoint {args.num_epochs - 1}")
 
-    # Load network state from final checkpoint
-    network.load((args.num_epochs - 1,), serialiser)
+    # Use CPU backend if desired
+    if args.cpu:
+        genn_kwargs["backend"]="SingleThreadedCPU"
 
-    compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
-                                 batch_size=args.batch_size, rng_seed=args.seed, 
-                                 reset_vars_between_batches=False, **genn_kwargs)
-    compiled_net = compiler.compile(network, name=f"classifier_test_{unique_suffix}")
-
-    with compiled_net:
-        # Perform warmup evaluation
-        # **TODO** subset of data
-        compiled_net.evaluate({input: spikes},
-                              {output: labels})
-                                            
-        # Evaluate model on numpy dataset
-        start_time = perf_counter()
-        callbacks = ["batch_progress_bar",
-                     CSVTestLog(f"test_output_{unique_suffix}.csv", output)]
-        metrics, _  = compiled_net.evaluate({input: spikes},
-                                            {output: labels},
-                                            callbacks=callbacks)
-        end_time = perf_counter()
-        print(f"Accuracy = {100 * metrics[output].result}%")
-        print(f"Time = {end_time - start_time}s")
+    # Loop through trained epochs
+    if args.test_all:
+        for e in range(args.num_epochs):
+             inference(genn_kwargs, args, network, serialiser, latest_spike_time, e, e > 0)
+    else:
+        inference(genn_kwargs, args, network, serialiser, latest_spike_time, args.num_epochs - 1, False)
