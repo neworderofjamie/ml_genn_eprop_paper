@@ -308,6 +308,15 @@ compiled_net = compiler.compile(network)
 Note that here again, loss functions and optimisers with default parameters are specified using strings but these are also fully customisable.
 After compiling with the \lstinline{EPropCompiler}, the \lstinline{compiled_net} object can then be used to train the network on a dataset:
 
+\begin{figure*}[t]
+  \centering
+  \includegraphics{figures/dense_accuracy.pdf}
+  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
+  All models were trained for 100 epochs with a batch size of 512.
+  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
+  \label{fig:dense_accuracy}
+\end{figure*}
+
 \begin{lstlisting}[language=Python]
 metrics, _  = compiled_net.train(
     {input: inputs}, {output: labels},
@@ -335,21 +344,11 @@ For example the membrane voltages emitted by all neurons during the first exampl
 In machine learning workflows where models may be trained for millions of timesteps, it is also important to be able to \emph{filter} what data is recorded to particular areas/stages of training to save memory and reduce overheads.
 Both \lstinline{SpikeRecorder} and \lstinline{VarRecorder} support filtering by neuron or example e.g. \\ \lstinline{SpikeRecorder(a, neuron=np.s_[0::2])} could be used to record spikes from every other neuron and \lstinline{SpikeRecorder(a, example_filter=1000)} could be used to only record during the 1000th example.
 
-
 \section{Results}
 In order to demonstrate the value of mlGeNN for spike-based ML research, here we present the results of a small exploration of SNN architectures, trained using e-prop~\citep{Bellec2020} on the DVS gesture dataset~\citep{amir_low_2017} which has been recently used to evaluate the EGRU~\citep{subramoney2022egru} and FPTT~\citep{yin2021accurate} learning rules.
 This dataset consists of \num{1342} recordings of \num{11} different hand and arm gestures, collected from \num{29} subjects under three different lighting condition using a DVS 128 event-based camera~\citep{lichtsteiner_128times128_2008}.
 Here we used the Tonic library~\citep{lenz_gregor_2021_5079802} to access the dataset and spatially downsample the events to $32\times32$.
 While mlGeNN does not depend on Tonic, it includes a \lstinline{preprocess_tonic_spikes} helper function which converts spike trains from Tonic datasets into mlGeNN's internal format.
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics{figures/dense_accuracy.pdf}
-  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
-  All models were trained for 100 epochs with a batch size of 512.
-  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
-  \label{fig:dense_accuracy}
-\end{figure*}
 
 \subsection{Accuracy}
 Figure~\ref{fig:dense_accuracy} shows the accuracy of a wide selection of one and two layer classifier models trained with e-prop.
@@ -362,6 +361,14 @@ Interesting, similar to the architecture employed by \citet{yin2021accurate}, th
 While this performance is slightly lower than the \SI{91.89 \pm 0.16}{\percent} reported by \citet{yin2021accurate}, our model has approximately a third the number of parameters (\num{0.66e6} vs \num{1.8e6})
 
 One of the significant advantages of mlGeNN is that it can exploit sparse connectivity to reduce training and inference time so, in the final part of our architectural exploration, we explore the effect of sparsity on the performance of our two best performing models (ALIF512R and ALIF256F-ALIF256R).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics{figures/performance.pdf}
+  \caption{Throughput of inference and training best two models on the DVS gesture dataset~\citep{amir_low_2017}.
+  GPU training was performed with a batch size of 512 and inference with a batch size of 264 (the full size of the test set).}
+  \label{fig:performance}
+\end{figure}
 
 \subsection{Performance}
 \begin{itemize}
