@@ -347,7 +347,6 @@ While mlGeNN does not depend on Tonic, it includes a \lstinline{preprocess_tonic
   \includegraphics{figures/dense_accuracy.pdf}
   \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
   All models were trained for 100 epochs with a batch size of 512.
-  \todo{finish training 1024 neuron models}
   Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
   \label{fig:dense_accuracy}
 \end{figure*}
@@ -355,15 +354,14 @@ While mlGeNN does not depend on Tonic, it includes a \lstinline{preprocess_tonic
 \subsection{Accuracy}
 Figure~\ref{fig:dense_accuracy} shows the accuracy of a wide selection of one and two layer classifier models trained with e-prop.
 These include configurations with and without recurrent connections and using both Adaptive and standard Leaky Integrate-and-Fire~(LIF and ALIF) neuron models.
-Of the single layer classifiers, the variant with a single layer of 512 recurrently connected ALIF neurons performs the best, achieving a mean accuracy of \SI{89.55}{\percent} on the test set.
+Of the single layer classifiers, the variant with a single layer of 512 recurrently connected ALIF neurons performs the best, achieving an accuracy of \SI{89.55 \pm 1.22}{\percent} on the test set.
 Although this model only has a single hidden layer and around \num{1.3E6} parameters, it out-performs a two layer EGRU model~\citep{subramoney2022egru} with over $4\times$ as many parameters which achieved \SI{88.02}{\percent} accuracy.
 
 Models using ALIF neurons also perform better than those using simpler LIF neurons in all of the two layer configurations.
-However, interestingly, the best performing model (mean accuracy on test set of \SI{91.29}{\percent}) had a feedforward first layer followed by a recurrent second layer  -- similar to the architecture employed by \citet{yin2021accurate} -- rather than having two recurrently connected layers.
-\begin{itemize}
-    \item FPTT shallow recurrent \SI{91.89 \pm 0.16}{\percent} 512 neuron encoder for each channel, feeding into recurrent population of 512 neurons
-    \item Take best architecture and explore sparsity
-\end{itemize}
+Interesting, similar to the architecture employed by \citet{yin2021accurate}, the best performing model -- with an accuracy of \SI{91.00 \pm 1}{\percent} on test set -- has a feedforward first layer followed by a recurrent second layer rather than two recurrently connected layers.
+While this performance is slightly lower than the \SI{91.89 \pm 0.16}{\percent} reported by \citet{yin2021accurate}, our model has approximately a third the number of parameters (\num{0.66e6} vs \num{1.8e6})
+
+One of the significant advantages of mlGeNN is that it can exploit sparse connectivity to reduce training and inference time so, in the final part of our architectural exploration, we explore the effect of sparsity on the performance of our two best performing models (ALIF512R and ALIF256F-ALIF256R).
 
 \subsection{Performance}
 \begin{itemize}
@@ -396,7 +394,7 @@ Therefore, based on the promising initial results presented by \citet{NowotnyLos
 %% consistent spelling of the heading.
 \begin{acks}
 This work was funded by the EPSRC (grant numbers EP/V052241/1 and EP/S030964/1) and the EU's Horizon 2020 program (grant agreement 945539).
-Compute time was provided through Gauss Centre for Supercomputing application number 21018 and EPSRC (grant number EP/T022205/1).
+Compute time was provided through Gauss Centre for Supercomputing application number 21018 and EPSRC (grant number EP/T022205/1) and local GPU hardware was provided by an NVIDIA hardware grant award.
 \end{acks}
 
 %%
