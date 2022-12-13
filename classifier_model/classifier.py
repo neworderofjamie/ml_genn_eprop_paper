@@ -59,6 +59,20 @@ class CSVTestLog(Callback):
                                   perf_counter() - self.start_time])
         self.file.flush()
 
+class ConnectivityCheckpoint(Callback):
+    def __init__(self, serialiser="numpy"):
+        self.serialiser = serialiser
+
+    def set_params(self, compiled_network, **kwargs):
+        # Extract compiled network
+        self._compiled_network = compiled_network
+
+    def on_epoch_end(self, epoch, metrics):
+        # If we should checkpoint this epoch
+        self._compiled_network.save_connectivity((epoch,), self.serialiser)
+
+
+
 def pad_hidden_layer_argument(arg, num_hidden_layers, context, default=None):
     # If argument wasn't specified but there is a default, repeat default for each hidden layer
     if arg is None and default is not None:
@@ -273,13 +287,13 @@ if args.train:
         start_epoch = 0 if args.resume_epoch is None else (args.resume_epoch + 1)
         callbacks = ["batch_progress_bar", Checkpoint(serialiser),
                      CSVTrainLog(f"train_output_{unique_suffix}.csv", output,
-                                 args.resume_epoch is not None)]
+                                 args.resume_epoch is not None),
+                     ConnectivityCheckpoint(serialise)]
         metrics, _  = compiled_net.train({input: spikes},
                                          {output: labels},
                                          num_epochs=args.num_epochs,
                                          callbacks=callbacks, shuffle=True,
                                          start_epoch=start_epoch)
-        compiled_net.save_connectivity((args.num_epochs - 1,), serialiser)
         end_time = perf_counter()
         print(f"Accuracy = {100 * metrics[output].result}%")
         print(f"Time = {end_time - start_time}s")
