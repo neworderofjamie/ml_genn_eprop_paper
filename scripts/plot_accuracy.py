@@ -29,9 +29,7 @@ def plot_accuracy_bars(df, axis):
     
     axis.set_xticks(bar_x + (BAR_PAD / 2))
     axis.set_xticklabels(df["config"], rotation=90)
-    axis.set_ylabel("Accuracy [%]")
-    axis.set_ylim((80.0, 100.0))
-    
+
 # Dictionary to hold data
 data = {"config": [], "num_layers": [], "seed": [], 
         "test_accuracy": [], "test_time": [],
@@ -53,11 +51,16 @@ for name in glob(os.path.join("results", "test*.csv")):
     layer_model_component_begin = layer_recurrent_component_begin + num_layers
     
     config = []
+    skip = False
     for i in range(num_layers):
         size = name_components[layer_size_component_begin + i]
         recurrent = (name_components[layer_recurrent_component_begin + i] == "True")
         model = name_components[layer_model_component_begin + i]
         
+        # **YUCK** not really happy with larger configurations so skip
+        if int(size) > 512:
+            skip = True
+
         config.append(model.upper() + size + ("R" if recurrent else "F"))
 
     # Read test output CSV
@@ -71,13 +74,14 @@ for name in glob(os.path.join("results", "test*.csv")):
     assert last_epoch_train_data.shape[0] == 1
 
     # Add data to intermediate dictionary
-    data["config"].append("-".join(config))
-    data["num_layers"].append(num_layers)
-    data["seed"].append(int(name_components[7]))
-    data["test_accuracy"].append((100.0 * (test_data["Number correct"] / test_data["Num trials"])).iloc[0])
-    data["test_time"].append(test_data["Time"].iloc[0])
-    data["train_accuracy"].append((100.0 * (last_epoch_train_data["Number correct"] / last_epoch_train_data["Num trials"])).iloc[0])
-    data["train_time"].append(last_epoch_train_data["Time"].iloc[0])
+    if not skip:
+        data["config"].append("-".join(config))
+        data["num_layers"].append(num_layers)
+        data["seed"].append(int(name_components[7]))
+        data["test_accuracy"].append((100.0 * (test_data["Number correct"] / test_data["Num trials"])).iloc[0])
+        data["test_time"].append(test_data["Time"].iloc[0])
+        data["train_accuracy"].append((100.0 * (last_epoch_train_data["Number correct"] / last_epoch_train_data["Num trials"])).iloc[0])
+        data["train_time"].append(last_epoch_train_data["Time"].iloc[0])
 
 # Build dataframe from dictionary and sort by config
 df = DataFrame(data=data)
@@ -113,6 +117,9 @@ plot_accuracy_bars(one_layer_df, dense_accuracy_axes[0])
 plot_accuracy_bars(two_layer_df, dense_accuracy_axes[1])
 dense_accuracy_axes[0].set_title("A", loc="left")
 dense_accuracy_axes[1].set_title("B", loc="left")
+dense_accuracy_axes[0].set_ylabel("Accuracy [%]")
+dense_accuracy_axes[0].set_ylim((80.0, 100.0))
+
 dense_accuracy_fig.tight_layout(pad=0)
 
 num_timesteps = np.ceil(18456.873)
