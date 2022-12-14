@@ -199,7 +199,8 @@ dense_axes[0].set_title("A", loc="left")
 dense_axes[1].set_title("B", loc="left")
 dense_axes[0].set_ylabel("Accuracy [%]")
 dense_axes[0].set_ylim((80.0, 100.0))
-dense_fig.legend([train_actor, test_actor], ["Train", "Test"], ncol=2, loc="lower left")
+dense_fig.legend([train_actor, test_actor], ["Train", "Test"], 
+                 ncol=2, loc="lower left", frameon=False)
 dense_fig.tight_layout(pad=0)
 
 # **YUCK** split one layer sparse config strings back into seperate strings

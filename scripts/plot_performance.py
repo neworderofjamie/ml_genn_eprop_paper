@@ -20,8 +20,8 @@ TEST_EXAMPLES = 264
 # Load data
 test_data = read_csv("results/test_performance.csv", delimiter=",")
 train_data = read_csv("results/train_performance.csv", delimiter=",")
-test_data = test_data.sort_values("Config")
-train_data = train_data.sort_values("Config")
+#test_data = test_data.sort_values("Config")
+#train_data = train_data.sort_values("Config")
 
 # Calculate timesteps/second
 test_fps = (TEST_EXAMPLES * TEST_STEPS) / test_data["Inference time [s]"]
@@ -31,8 +31,10 @@ gpu_test = test_data[test_data["Backend"] == "GPU"]
 cpu_test = test_data[test_data["Backend"] == "CPU"]
 
 # Get configurations
-configurations = np.intersect1d(test_data["Config"].unique(),
-                                train_data["Config"].unique())
+# **HACK** cos I cba to write a sorting function
+#configurations = np.intersect1d(test_data["Config"].unique(),
+#                                train_data["Config"].unique())
+configurations = ["ALIF512R", "ALIF256F256R", "ALIF512R sparse", "ALIF256F256R sparse"]
 
 fig, axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
 
@@ -55,11 +57,11 @@ axis.xaxis.grid(False)
 axis.set_yscale("log")
 axis.set_ylabel("Timesteps per second")
 axis.set_xticks(bar_x + BAR_PAD)
-axis.set_xticklabels(configurations)
+axis.set_xticklabels([c.replace(" ", "\n") for c in configurations])
 
 fig.legend([train, inference_gpu, inference_cpu],
            ["Train", "GPU inference", "CPU inference"],
-           loc="lower center", ncol=3)
+           loc="lower center", ncol=3, frameon=False)
 fig.tight_layout(pad=0, rect=[0.0, 0.125, 1.0, 1.0])
 
 if not plot_settings.presentation and not plot_settings.poster:
