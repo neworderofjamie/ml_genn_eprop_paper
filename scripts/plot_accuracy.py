@@ -21,9 +21,9 @@ def plot_accuracy_bars(df, axis):
     bar_x = np.arange(df.shape[0]) * GROUP_PAD
     
     # Show bars for train and test accuracy
-    axis.bar(bar_x, df["mean_train_accuracy"], yerr=df["sd_train_accuracy"],
+    train = axis.bar(bar_x, df["mean_train_accuracy"], yerr=df["sd_train_accuracy"],
              width=BAR_WIDTH, color=pal[0])
-    axis.bar(bar_x + BAR_PAD, df["mean_test_accuracy"], yerr=df["sd_test_accuracy"],
+    test = axis.bar(bar_x + BAR_PAD, df["mean_test_accuracy"], yerr=df["sd_test_accuracy"],
              width=BAR_WIDTH, color=pal[1])
     
     # Remove axis junk
@@ -31,6 +31,7 @@ def plot_accuracy_bars(df, axis):
     axis.xaxis.grid(False)
     
     axis.set_xticks(bar_x + (BAR_PAD / 2))
+    return train, test
 
 def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     # Loop through all two layer sparsity configurations
@@ -190,7 +191,7 @@ print(f"Best two layer sparse config:{best_two_layer_sparse['config']} {best_two
 dense_fig, dense_axes = plt.subplots(1, 2, sharey=True,
                                      figsize=(plot_settings.double_column_width, 2.0))
 
-plot_accuracy_bars(one_layer_dense_df, dense_axes[0])
+train_actor, test_actor = plot_accuracy_bars(one_layer_dense_df, dense_axes[0])
 plot_accuracy_bars(two_layer_dense_df, dense_axes[1])
 dense_axes[0].set_xticklabels(one_layer_dense_df["config"], rotation=90)
 dense_axes[1].set_xticklabels(two_layer_dense_df["config"], rotation=90)
@@ -198,6 +199,7 @@ dense_axes[0].set_title("A", loc="left")
 dense_axes[1].set_title("B", loc="left")
 dense_axes[0].set_ylabel("Accuracy [%]")
 dense_axes[0].set_ylim((80.0, 100.0))
+dense_fig.legend([train_actor, test_actor], ["Train", "Test"], ncol=2, loc="lower left")
 dense_fig.tight_layout(pad=0)
 
 # **YUCK** split one layer sparse config strings back into seperate strings
