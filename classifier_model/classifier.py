@@ -91,7 +91,8 @@ def inference(genn_kwargs, args, network, serialiser, latest_spike_time, epoch, 
 
     compiler = InferenceCompiler(evaluate_timesteps=int(np.ceil(latest_spike_time)),
                                  batch_size=1 if args.cpu else args.batch_size, rng_seed=args.seed,
-                                 reset_vars_between_batches=False, **genn_kwargs)
+                                 reset_vars_between_batches=False, 
+                                 kernel_profiling=args.kernel_profiling, **genn_kwargs)
     compiled_net = compiler.compile(network, name=f"classifier_test_{unique_suffix}")
 
     with compiled_net:
@@ -110,11 +111,17 @@ def inference(genn_kwargs, args, network, serialiser, latest_spike_time, epoch, 
         end_time = perf_counter()
         print(f"Accuracy = {100 * metrics[output].result}%")
         print(f"Time = {end_time - start_time}s")
+        
+        if args.kernel_profiling:
+            print(f"Neuron update time = {compiled_net.genn_model.neuron_update_time}")
+            print(f"Presynaptic update time = {compiled_net.genn_model.presynaptic_update_time}")
+            print(f"Reset time = {compiled_net.genn_model.get_custom_update_time('Reset')}")
 
 parser = ArgumentParser()
 parser.add_argument("--device-id", type=int, default=0, help="CUDA device ID")
 parser.add_argument("--train", action="store_true", help="Train model")
 parser.add_argument("--cpu", action="store_true", help="Use CPU for inference")
+parser.add_argument("--kernel-profiling", action="store_true", help="Output kernel profiling data")
 parser.add_argument("--test-all", action="store_true", help="Test all checkpoints up to num epochs")
 parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
 parser.add_argument("--num-epochs", type=int, default=50, help="Number of training epochs")
@@ -157,7 +164,8 @@ args.hidden_recurrent_sparsity = pad_hidden_layer_argument(args.hidden_recurrent
 unique_suffix = "_".join(("_".join(str(i) for i in val) if isinstance(val, list) 
                          else str(val))
                          for arg, val in vars(args).items()
-                         if arg not in ["train", "cpu", "resume_epoch", "test_all"])
+                         if arg not in ["train", "cpu", "resume_epoch",
+                                        "test_all", "kernel_profiling"])
 
 # If dataset is MNIST
 spikes = []
@@ -278,7 +286,8 @@ if args.train:
     # Create EProp compiler and compile
     compiler = EPropCompiler(example_timesteps=int(np.ceil(latest_spike_time)),
                              losses="sparse_categorical_crossentropy", rng_seed=args.seed,
-                             optimiser="adam", batch_size=args.batch_size, **genn_kwargs)
+                             optimiser="adam", batch_size=args.batch_size, 
+                             kernel_profiling=args.kernel_profiling, **genn_kwargs)
     compiled_net = compiler.compile(network, name=f"classifier_train_{unique_suffix}")
 
     with compiled_net:
