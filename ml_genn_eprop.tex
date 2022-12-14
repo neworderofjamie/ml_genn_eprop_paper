@@ -138,7 +138,7 @@
 %% The abstract is a short summary of the work to be presented in the
 %% article.
 \begin{abstract}
-  Intuitive and easy to use application programming interfaces such as Keras have contributed majorly to the rapid acceleration of machine learning with artificial neural networks. Building on our recent work on translating ANNs to SNNs, we here present the mlGeNN interface as an easy way to define, train and test spiking neural networks on our efficient GPU based GeNN framework. We illustrate the use of mlGeNN by investigating the performance of a number of shallow spiking neural networks trained with the e-prop learning rule to recognise hand gestures from the DVS gesture dataset. We find that not only is mlGeNN vastly more convenient to use than the lower level PyGeNN interface, the new freedom to effortlessly and rapidly prototype different network architectures also gave us an unprecendent overview over how e-prop compares to other recently published results on the DVS gesture dataset across architectural details. 
+  Intuitive and easy to use application programming interfaces such as Keras have contributed majorly to the rapid acceleration of machine learning with artificial neural networks. Building on our recent works on translating ANNs to SNNs and training classifiers with eProp, we here present the mlGeNN interface as an easy way to define, train and test spiking neural networks on our efficient GPU based GeNN framework. We illustrate the use of mlGeNN by investigating the performance of a number of shallow spiking neural networks trained with the e-prop learning rule to recognise hand gestures from the DVS gesture dataset. We find that not only is mlGeNN vastly more convenient to use than the lower level PyGeNN interface, the new freedom to effortlessly and rapidly prototype different network architectures also gave us an unprecendent overview over how e-prop compares to other recently published results on the DVS gesture dataset across architectural details. 
 \end{abstract}
 
 %%
@@ -196,6 +196,15 @@ In this paper we introduce a second module of mlGeNN focused on training SNNs fr
 While fully describing the functionality of mlGeNN is beyond the scope of this paper, in the following sections we present an overview of some of our design decisions and the current feature set of mlGeNN.
 For more information about mlGeNN, we invite readers to visit github and explore our online documention~\todo{cite}.
 
+\begin{figure*}[t]
+  \centering
+  \includegraphics{figures/dense_accuracy.pdf}
+  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
+  All models were trained for 100 epochs with a batch size of 512.
+  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
+  \label{fig:dense_accuracy}
+\end{figure*}
+
 \subsection{Describing models}
 Machine learning frameworks such as PyTorch~\citep{paszke2019pytorch} and TensorFlow~\citep{TensorFlow} are designed to efficiently process directed and acyclical computational graphs.
 In order to express recurrent connectivity within an otherwise directed acylical graph, special recurrent layers are required to `hide' the cyclical nature of the recurrent connectivity.
@@ -207,6 +216,7 @@ While this type of model description is common amongst SNN simulators used for c
 
 All populations and connections are owned by a \lstinline{Network} object which acts as a context manager.
 A network with two populations of neurons could be simply created like:
+
 \begin{lstlisting}[language=Python]
 network = Network()
 with network:
@@ -234,7 +244,7 @@ with network:
 By default, \lstinline{Connection} objects use a `delta' synapse model where the accumulated weight of incoming spikes is directly injected into neurons. 
 However, if a somewhat more realistic model is required, e.g. where inputs are \emph{shaped} to mimic the dynamics of real ion channels, this can be swapped out:
 
-CONNECTION EXAMPLE MISSING?
+\todo{CONNECTION EXAMPLE MISSING?}
 
 While the flexibility to create networks with any topology is very useful, mlGeNN also provides a \lstinline{SequentialNetwork} wrapper class -- inspired by \lstinline{Sequential} models in Keras -- for specifying common feedforward models more tersely:
 \begin{lstlisting}[language=Python]
@@ -269,15 +279,6 @@ class IntegrateFire(Neuron):
             genn_model, "V", self, dt)
 \end{lstlisting}
 
-\begin{figure*}[t]
-  \centering
-  \includegraphics{figures/dense_accuracy.pdf}
-  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
-  All models were trained for 100 epochs with a batch size of 512.
-  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
-  \label{fig:dense_accuracy}
-\end{figure*}
-
 \subsection{Using models for training and inference}
 Once a network structure has been defined, mlGeNN provides a range of \emph{compilers} to produce GeNN models which can then be used for training or inference.
 The simplest compiler is the \lstinline{InferenceCompiler} which builds a GeNN model with static weights and parallel batching support for efficiently performing inference on an SNN model:
@@ -298,7 +299,7 @@ This compiler checks the validity of the model and automatically adds the approp
 \begin{lstlisting}[language=Python]
 compiler = EPropCompiler(
     example_timesteps=1500,
-    losses="sparse_categorical_crossentropy",
+    losses="sparse_categorical_crossentropy",\textbf
     optimiser="adam", batch_size=512)
 
 compiled_net = compiler.compile(network)
@@ -312,14 +313,26 @@ metrics, _  = compiled_net.train(
     num_epochs=args.num_epochs, shuffle=True)
 \end{lstlisting}
 
-\begin{figure*}[t]
+\begin{figure}[t]
   \centering
   \includegraphics{figures/sparse_accuracy.pdf}
-  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on sparse models with (A) ALIF512R (B) ALIF256F-ALIF256R architectures and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
+  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on sparse models with ALIF512R architectures and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
   All models were trained for 100 epochs with a batch size of 512.
-  Sparsity measure describes the fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
-  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
+  Connectivity percentages describe fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
+  ``Input connectivity'' describes connections from input to hidden layer.
+  ``Recurrent connectivity'' describes recurrent connections in hidden layer.}
   \label{fig:sparse_accuracy}
+\end{figure}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics{figures/two_layer_sparse_accuracy.pdf}
+  \caption{Accuracy on the training (A) and testing (B) set of the DVS gesture dataset~\citep{amir_low_2017} on sparse models with ALIF256F-ALIF256R architectures and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
+  All models were trained for 100 epochs with a batch size of 512.
+  Connectivity percentages describe fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
+  ``Input connectivity'' describes connections from input to first hidden layer.
+  ``Hidden connectivity'' describes \emph{internal} connection from first to second hidden layers (``I'') and recurrent connections in second hidden layer (``R'').}
+  \label{fig:two_layer_sparse_accuracy}
 \end{figure*}
 
 \subsection{Recording and debugging}

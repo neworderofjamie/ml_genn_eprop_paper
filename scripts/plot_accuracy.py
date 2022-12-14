@@ -32,7 +32,7 @@ def plot_accuracy_bars(df, axis):
     
     axis.set_xticks(bar_x + (BAR_PAD / 2))
 
-def plot_accuracy_heatmap(df, *sparsity_series):
+def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     # Loop through all two layer sparsity configurations
     lookup = {10: 2, 5: 1, 1: 0}
     test_heat = np.zeros([len(lookup)] * len(sparsity_series))
@@ -47,7 +47,7 @@ def plot_accuracy_heatmap(df, *sparsity_series):
         train_heat[index] = df.loc[i]["mean_train_accuracy"]
 
     # Create two column figure
-    fig, train_axis = plt.subplots(figsize=(plot_settings.double_column_width, 1.6))
+    fig, train_axis = plt.subplots(figsize=(width, height))
 
 
     # **YUCK** the only way I can figure out to make the colorbar the same height as the imshows is to use an AxesDivider. However
@@ -58,7 +58,7 @@ def plot_accuracy_heatmap(df, *sparsity_series):
     test_axis = divider.append_axes("right", size="100%")
 
     # Split of smaller colorbar axis
-    colorbar_axis = divider.append_axes("right", size="5%", pad=0.05)
+    colorbar_axis = divider.append_axes("right", size=cmap_size, pad=0.05)
 
     # Plot train and test performance heatmaps
     imshow_kwargs = {"vmin": 70, "vmax": 100, "interpolation": "none", "cmap": "Reds", "origin": "lower"}
@@ -200,14 +200,34 @@ dense_axes[0].set_ylabel("Accuracy [%]")
 dense_axes[0].set_ylim((80.0, 100.0))
 dense_fig.tight_layout(pad=0)
 
-# Create sparse accuracy bar plot
-one_layer_sparse_accuracy_fig, one_layer_sparse_accuracy_axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
+# **YUCK** split one layer sparse config strings back into seperate strings
+one_layer_sparsity = one_layer_sparse_df["sparse_config"].str.split(",", expand=True)
 
-plot_accuracy_bars(one_layer_sparse_df, one_layer_sparse_accuracy_axis)
-one_layer_sparse_accuracy_axis.set_ylabel("Accuracy [%]")
-one_layer_sparse_accuracy_axis.set_ylim((80.0, 100.0))
-one_layer_sparse_accuracy_axis.set_xticklabels([c.replace(",", "\n") for c in one_layer_sparse_df["sparse_config"]])
-one_layer_sparse_accuracy_fig.tight_layout(pad=0)
+# Remove "I:" and "R:" prefixes and "%" suffixes
+one_layer_pop0_pop1_sparsity = one_layer_sparsity[0].str.slice(2, -1)
+one_layer_pop1_pop1_sparsity = one_layer_sparsity[1].str.slice(2, -1)
+
+# Plot heatmap
+one_layer_sparse_fig, one_layer_sparse_train_axis, one_layer_sparse_test_axis =\
+    plot_accuracy_heatmap(one_layer_sparse_df, plot_settings.column_width, 1.6, "15%",
+                          one_layer_pop0_pop1_sparsity, one_layer_pop1_pop1_sparsity)
+
+one_layer_sparse_train_axis.set_ylabel("Input connectivity")
+
+# Set y tick labels
+sparsities = ["1%", "5%", "10%"]
+one_layer_sparse_train_axis.set_yticks(range(3))
+one_layer_sparse_train_axis.set_yticklabels(sparsities)
+one_layer_sparse_test_axis.set_yticks([])
+
+for a in [one_layer_sparse_train_axis, one_layer_sparse_test_axis]:
+    a.set_xlabel("Recurrent connectivity")
+    
+    # Set x tick labels
+    a.set_xticks(range(3))
+    a.set_xticklabels(sparsities)
+
+one_layer_sparse_fig.tight_layout(pad=0)        
 
 # **YUCK** split two layer sparse config strings back into seperate strings
 two_layer_sparse_config_split = two_layer_sparse_df["sparse_config"].str.split("-", expand=True)
@@ -220,14 +240,16 @@ two_layer_pop2_pop2_sparsity = two_layer_recurrent_sparsity[1].str.slice(2, -1)
 
 # Plot heatmap
 two_layer_sparse_fig, two_layer_sparse_train_axis, two_layer_sparse_test_axis =\
-    plot_accuracy_heatmap(two_layer_sparse_df, two_layer_pop0_pop1_sparsity,
-                          two_layer_pop1_pop2_sparsity, two_layer_pop2_pop2_sparsity)
+    plot_accuracy_heatmap(two_layer_sparse_df, plot_settings.double_column_width, 1.6, "5%",
+                          two_layer_pop0_pop1_sparsity, two_layer_pop1_pop2_sparsity, 
+                          two_layer_pop2_pop2_sparsity)
                                                 
 two_layer_sparse_train_axis.set_ylabel("Input connectivity")
 
 # Loop through image axes
-sparsities = ["1%", "5%", "10%"]
 for a in [two_layer_sparse_train_axis, two_layer_sparse_test_axis]:
+    a.set_xlabel("Hidden connectivity")
+
     # Set y tick labels
     a.set_yticks(range(3))
     a.set_yticklabels(sparsities)
@@ -241,7 +263,7 @@ two_layer_sparse_fig.tight_layout(pad=0)
 
 if not plot_settings.presentation and not plot_settings.poster:
     dense_fig.savefig("../figures/dense_accuracy.pdf")
-    one_layer_sparse_accuracy_fig.savefig("../figures/sparse_accuracy.pdf")
+    one_layer_sparse_fig.savefig("../figures/sparse_accuracy.pdf")
     two_layer_sparse_fig.savefig("../figures/two_layer_sparse_accuracy.pdf")
 
 plt.show()
