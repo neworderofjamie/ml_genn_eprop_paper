@@ -269,6 +269,15 @@ class IntegrateFire(Neuron):
             genn_model, "V", self, dt)
 \end{lstlisting}
 
+\begin{figure*}[t]
+  \centering
+  \includegraphics{figures/dense_accuracy.pdf}
+  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
+  All models were trained for 100 epochs with a batch size of 512.
+  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
+  \label{fig:dense_accuracy}
+\end{figure*}
+
 \subsection{Using models for training and inference}
 Once a network structure has been defined, mlGeNN provides a range of \emph{compilers} to produce GeNN models which can then be used for training or inference.
 The simplest compiler is the \lstinline{InferenceCompiler} which builds a GeNN model with static weights and parallel batching support for efficiently performing inference on an SNN model:
@@ -297,20 +306,21 @@ compiled_net = compiler.compile(network)
 Note that here again, loss functions and optimisers with default parameters are specified using strings but these are also fully customisable.
 After compiling with the \lstinline{EPropCompiler}, the \lstinline{compiled_net} object can then be used to train the network on a dataset:
 
-\begin{figure*}[t]
-  \centering
-  \includegraphics{figures/dense_accuracy.pdf}
-  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
-  All models were trained for 100 epochs with a batch size of 512.
-  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
-  \label{fig:dense_accuracy}
-\end{figure*}
-
 \begin{lstlisting}[language=Python]
 metrics, _  = compiled_net.train(
     {input: inputs}, {output: labels},
     num_epochs=args.num_epochs, shuffle=True)
 \end{lstlisting}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics{figures/sparse_accuracy.pdf}
+  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on sparse models with (A) ALIF512R (B) ALIF256F-ALIF256R architectures and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
+  All models were trained for 100 epochs with a batch size of 512.
+  Sparsity measure describes the fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
+  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
+  \label{fig:sparse_accuracy}
+\end{figure*}
 
 \subsection{Recording and debugging}
 One of the challenges of working with SNNs, compared to standard ANNs, is that neurons are stateful so the ability to efficiently record and visualise model state is vital for an efficient workflow.
@@ -348,6 +358,8 @@ Interestingly, similar to the architecture employed by \citet{yin2021accurate}, 
 While this performance is slightly lower than the \SI{91.89 \pm 0.16}{\percent} reported by \citet{yin2021accurate}, our model has approximately a third the number of parameters (\num{0.66e6} vs \num{1.8e6}).
 
 One of the significant advantages of mlGeNN is that it can exploit sparse connectivity to reduce training and inference time so, in the final part of our architectural exploration, we explore the effect of sparsity on the performance of our two best performing models (ALIF512R and ALIF256F-ALIF256R).
+The results of this exploration are shown in figure~\ref{fig:sparse_accuracy} and, while increasing sparsity clearly impacts performance, sparse configurations of ALIF512R are still highly competitive.
+In fact, the best oerforming ALIF512R configuration -- with \SI{5}{\percent} connectivity in the input connections and \SI{10}{\percent} connectivity in the recurrent connections -- still out-performs the two layer EGRU model~\citep{subramoney2022egru}, even though it only has over $60\times$ fewer parameters.
 
 \begin{figure}[t]
   \centering

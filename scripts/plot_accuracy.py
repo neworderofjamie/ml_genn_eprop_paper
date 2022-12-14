@@ -28,7 +28,6 @@ def plot_accuracy_bars(df, axis):
     axis.xaxis.grid(False)
     
     axis.set_xticks(bar_x + (BAR_PAD / 2))
-    axis.set_xticklabels(df["config"], rotation=90)
 
 # Dictionary to hold data
 data = {"config": [], "sparse": [], "sparse_config": [], "num_layers": [], "seed": [], 
@@ -70,7 +69,7 @@ for name in glob(os.path.join("results", "test_output_*.csv")):
             skip = True
 
         config.append(model.upper() + size + ("R" if recurrent else "F"))
-        sparse_config.append(input_sparsity + "I" + ((recurrent_sparsity + "R") if recurrent else ""))
+        sparse_config.append(f"I:{int(100.0 * float(input_sparsity))}%" + (f",R:{int(100.0 * float(recurrent_sparsity))}%" if recurrent else ""))
 
     # Read test output CSV
     test_data = read_csv(name, delimiter=",")
@@ -130,21 +129,58 @@ print(f"Best two layer dense config:{best_two_layer_dense['config']} with {best_
 print(f"Best one layer sparse config:{best_one_layer_sparse['config']} {best_one_layer_sparse['sparse_config']} with {best_one_layer_sparse['mean_test_accuracy']:.2f}±{best_one_layer_sparse['sd_test_accuracy']:.2f}%")
 print(f"Best two layer sparse config:{best_two_layer_sparse['config']} {best_two_layer_sparse['sparse_config']} with {best_two_layer_sparse['mean_test_accuracy']:.2f}±{best_two_layer_sparse['sd_test_accuracy']:.2f}%")
 
-
-# Create accuracy bar plot
+# Create dense accuracy bar plot
 dense_accuracy_fig, dense_accuracy_axes = plt.subplots(1, 2, sharey=True,
                                                        figsize=(plot_settings.double_column_width, 2.0))
 
 plot_accuracy_bars(one_layer_dense_df, dense_accuracy_axes[0])
 plot_accuracy_bars(two_layer_dense_df, dense_accuracy_axes[1])
+dense_accuracy_axes[0].set_xticklabels(one_layer_dense_df["config"], rotation=90)
+dense_accuracy_axes[1].set_xticklabels(two_layer_dense_df["config"], rotation=90)
 dense_accuracy_axes[0].set_title("A", loc="left")
 dense_accuracy_axes[1].set_title("B", loc="left")
 dense_accuracy_axes[0].set_ylabel("Accuracy [%]")
 dense_accuracy_axes[0].set_ylim((80.0, 100.0))
-
 dense_accuracy_fig.tight_layout(pad=0)
 
+# Create sparse accuracy bar plot
+one_layer_sparse_accuracy_fig, one_layer_sparse_accuracy_axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
+
+plot_accuracy_bars(one_layer_sparse_df, one_layer_sparse_accuracy_axis)
+one_layer_sparse_accuracy_axis.set_ylabel("Accuracy [%]")
+one_layer_sparse_accuracy_axis.set_ylim((80.0, 100.0))
+one_layer_sparse_accuracy_axis.set_xticklabels([c.replace(",", "\n") for c in one_layer_sparse_df["sparse_config"]])
+one_layer_sparse_accuracy_fig.tight_layout(pad=0)
+
+
+
+# **YUCK** split two layer sparse config strings back into seperate strings
+two_layer_sparse_config_split = two_layer_sparse_df["sparse_config"].str.split("-", expand=True)
+two_layer_recurrent_sparsity = two_layer_sparse_config_split[1].str.split(",", expand=True)
+
+# Remove "I:" and "R:" prefixes and "%" suffixes
+two_layer_pop0_pop1_sparsity = two_layer_sparse_config_split[0].str.slice(2, -1)
+two_layer_pop1_pop2_sparsity = two_layer_recurrent_sparsity[0].str.slice(2, -1)
+two_layer_pop2_pop2_sparsity = two_layer_recurrent_sparsity[1].str.slice(2, -1)
+
+# Build heatmaps of test and train accuracy
+lookup = {10: 0, 5: 1, 1: 2}
+test_heat = np.zeros((3, 3, 3))
+train_heat = np.zeros((3, 3, 3))
+for i in two_layer_pop0_pop1_sparsity.index:
+    index = np.index_exp[lookup[int(two_layer_pop0_pop1_sparsity.loc[i])],
+                         lookup[int(two_layer_pop1_pop2_sparsity.loc[i])],
+                         lookup[int(two_layer_pop2_pop2_sparsity.loc[i])]]
+    test_heat[index] = two_layer_sparse_df.loc[i]["mean_test_accuracy"]
+    train_heat[index] = two_layer_sparse_df.loc[i]["mean_train_accuracy"]
+
+one_layer_sparse_accuracy_fig, one_layer_sparse_accuracy_axes =\
+    plt.subplots(1, 2, sharey=True, figsize=(plot_settings.double_column_width, 2.0))
+
+one_layer_sparse_accuracy_axes[0].imshow(train_heat.reshape((3, 3 * 3)))
+one_layer_sparse_accuracy_axes[1].imshow(test_heat.reshape((3, 3 * 3)))
 if not plot_settings.presentation and not plot_settings.poster:
     dense_accuracy_fig.savefig("../figures/dense_accuracy.pdf")
+    one_layer_sparse_accuracy_fig.savefig("../figures/sparse_accuracy.pdf")
 
 plt.show()
