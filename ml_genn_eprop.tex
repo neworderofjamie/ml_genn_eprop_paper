@@ -371,14 +371,17 @@ Interestingly, similar to the architecture employed by \citet{yin2021accurate}, 
 While this performance is slightly lower than the \SI{91.89 \pm 0.16}{\percent} reported by \citet{yin2021accurate}, our model has approximately a third the number of parameters (\num{0.66e6} vs \num{1.8e6}).
 
 One of the significant advantages of mlGeNN is that it can exploit sparse connectivity to reduce training and inference time so, in the final part of our architectural exploration, we explore the effect of sparsity on the performance of our two best performing models (ALIF512R and ALIF256F-ALIF256R).
-The results of this exploration are shown in figure~\ref{fig:sparse_accuracy} and, while increasing sparsity clearly impacts performance, sparse configurations of ALIF512R are still highly competitive.
-In fact, the best oerforming ALIF512R configuration -- with \SI{5}{\percent} connectivity in the input connections and \SI{10}{\percent} connectivity in the recurrent connections -- still out-performs the two layer EGRU model~\citep{subramoney2022egru}, even though it only has over $60\times$ fewer parameters.
+The results of this exploration are shown in figures~\ref{fig:sparse_accuracy}~and~\ref{fig:two_layer_sparse_accuracy} and, while increasing sparsity clearly impacts performance, sparse configurations of ALIF512R are still highly competitive.
+In fact, the best performing ALIF512R configuration -- with \SI{5}{\percent} connectivity in the input connections and \SI{10}{\percent} connectivity in the recurrent connections -- still out-performs the two layer EGRU model~\citep{subramoney2022egru}, even though it only has over $60\times$ fewer parameters.
 
 \begin{figure}[t]
   \centering
   \includegraphics{figures/performance.pdf}
-  \caption{Throughput of inference and training best two models on the DVS gesture dataset~\citep{amir_low_2017}.
-  GPU training was performed with a batch size of 512 and inference with a batch size of 264 (the full size of the test set).}
+  \caption{Throughput of inference and training best four models on the DVS gesture dataset~\citep{amir_low_2017}.
+  Horizontal dashed line indicates performance required to operate in real-time.
+  GPU training was performed with a batch size of 512 and inference with a batch size of 264 (the full size of the test set).
+  GPU training and inference were performed on an NVIDIA RTX A5000 GPU with \SI{24}{\giga\byte} of memory.
+  CPU inference was performed on an Intel Xeon Gold 6134 CPU.}
   \label{fig:performance}
 \end{figure}
 
