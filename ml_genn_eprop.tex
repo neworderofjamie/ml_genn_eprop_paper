@@ -367,9 +367,9 @@ In machine learning workflows, where models may be trained for millions of times
 Both \lstinline{SpikeRecorder} and \lstinline{VarRecorder} support filtering by neuron or example, e.g. \\ \lstinline{SpikeRecorder(a, neuron=np.s_[0::2])} could be used to record spikes from every other neuron and \lstinline{SpikeRecorder(a, example_filter=1000)} could be used to only record during the 1000th example.
 
 \section{Results}
-In order to demonstrate the value of mlGeNN for spike-based ML research, we here present the results of a small exploration of SNN architectures, trained using e-prop~\citep{Bellec2020} on the DVS gesture dataset~\citep{amir_low_2017}, which has recently been used to evaluate the EGRU~\citep{subramoney2022egru} and FPTT~\citep{yin2021accurate} learning rules.
+In order to demonstrate the value of mlGeNN for spike-based ML research, in the following section we present the results of an exploration of SNN architectures, trained using e-prop~\citep{Bellec2020} on the DVS gesture dataset~\citep{amir_low_2017} -- which has recently been used to evaluate EGRU~\citep{subramoney2022egru} models and the FPTT~\citep{yin2021accurate} learning rule.
 This dataset consists of \num{1342} recordings of \num{11} different hand and arm gestures, collected from \num{29} subjects under three different lighting condition using a DVS 128 event-based camera~\citep{lichtsteiner_128times128_2008}.
-We used the Tonic library~\citep{lenz_gregor_2021_5079802} to access the dataset and spatially downsample the events to $32\times32$.
+We used the Tonic library~\citep{lenz_gregor_2021_5079802} to access and spatially downsample the dataset to $32\times32$ resolution.
 While mlGeNN does not depend on Tonic, it includes a \lstinline{preprocess_tonic_spikes} helper function which converts spike trains from Tonic datasets into mlGeNN's internal format.
 
 \subsection{Accuracy}
@@ -379,7 +379,7 @@ Of the single layer classifiers, the variant with a single layer of 512 recurren
 Although this model only has a single hidden layer and around \num{1.3E6} parameters, it out-performs a two layer EGRU model~\citep{subramoney2022egru} with over $4\times$ as many parameters which achieved \SI{88.02}{\percent} accuracy.
 
 Models using ALIF neurons also achieve higher accuracies than those using simpler LIF neurons in all of the two layer configurations.
-Interestingly, similar to the architecture employed by \citet{yin2021accurate}, the best performing model -- with an accuracy of \SI{91.00 \pm 1}{\percent} on the test set -- has a feedforward first layer followed by a recurrent second layer rather than two recurrently connected layers.
+Interestingly, like the architecture employed by \citet{yin2021accurate}, the best performing model -- with a test accuracy of \SI{91.00 \pm 1}{\percent} -- has a feedforward first layer followed by a recurrent second layer rather than two recurrently connected layers.
 While this performance is slightly lower than the \SI{91.89 \pm 0.16}{\percent} reported by \citet{yin2021accurate}, our model has approximately a third the number of parameters (\num{0.66e6} vs \num{1.8e6}).
 
 One of the significant advantages of mlGeNN is that it can exploit sparse connectivity to reduce training and inference time so, in the final part of our architectural exploration, we explore the effect of sparsity on the performance of our two best performing architectures (ALIF512R and ALIF256F-ALIF256R).
@@ -402,7 +402,7 @@ The best-performing ALIF512 model -- with \SI{5}{\percent} connectivity in the i
 \end{figure}
 
 \subsection{Performance}
-Efficiency is one of the main reasons why we believe dedicated tools for spike-based ML such as mlGeNN are necessary so it is important to compare the performance -- both for inference and training -- of models.
+Efficiency is one of the main reasons why we believe dedicated tools such as mlGeNN are necessary for spike-based ML so it is important to investigate the performance of iyr models both for inference and training.
 Figure~\ref{fig:performance} compares the throughput -- the rate that timesteps can be processed at -- of the best performing models identified in the previous section for both training and inference.
 Because e-prop training time is dominated by the time-driven update of synaptic eligibility traces, the ALIF512R architecture trains slower than the ALIF256F-ALIF256R as it has more parameters to update every timestep.
 Furthermore, the sparse ALIF512R and ALIF256F-ALIF256R architectures trains $11\times$and $7\times$ faster than their dense counterparts respectively -- demonstrate how effecitively GeNN can take advantage of sparse connectivity.
