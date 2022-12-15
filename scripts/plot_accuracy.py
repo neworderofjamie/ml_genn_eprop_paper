@@ -246,16 +246,16 @@ two_layer_sparse_fig, two_layer_sparse_train_axis, two_layer_sparse_test_axis =\
     plot_accuracy_heatmap(two_layer_sparse_df, plot_settings.double_column_width, 1.6, "5%",
                           two_layer_pop0_pop1_sparsity, two_layer_pop1_pop2_sparsity, 
                           two_layer_pop2_pop2_sparsity)
-                                                
+
+# Set y tick labels
 two_layer_sparse_train_axis.set_ylabel("Input connectivity")
+two_layer_sparse_train_axis.set_yticks(range(3))
+two_layer_sparse_train_axis.set_yticklabels(sparsities)
+two_layer_sparse_test_axis.set_yticks([])
 
 # Loop through image axes
 for a in [two_layer_sparse_train_axis, two_layer_sparse_test_axis]:
     a.set_xlabel("Hidden connectivity")
-
-    # Set y tick labels
-    a.set_yticks(range(3))
-    a.set_yticklabels(sparsities)
     
     # Set x tick labels
     a.set_xticks(range(9))
