@@ -62,7 +62,7 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     colorbar_axis = divider.append_axes("right", size=cmap_size, pad=0.05)
 
     # Plot train and test performance heatmaps
-    imshow_kwargs = {"vmin": 70, "vmax": 100, "interpolation": "none", "cmap": "Reds", "origin": "lower"}
+    imshow_kwargs = {"vmin": 70, "vmax": 100, "interpolation": "nearest", "cmap": "Reds", "origin": "lower"}
     
     # Reshape heatmaps to 2D
     if len(train_heat.shape) > 2:
@@ -230,7 +230,7 @@ for a in [one_layer_sparse_train_axis, one_layer_sparse_test_axis]:
     a.set_xticks(range(3))
     a.set_xticklabels(sparsities)
 
-one_layer_sparse_fig.tight_layout(pad=0)        
+one_layer_sparse_fig.tight_layout(pad=0)
 
 # **YUCK** split two layer sparse config strings back into seperate strings
 two_layer_sparse_config_split = two_layer_sparse_df["sparse_config"].str.split("-", expand=True)

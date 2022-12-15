@@ -402,7 +402,7 @@ The best-performing ALIF512 model -- with \SI{5}{\percent} connectivity in the i
 \end{figure}
 
 \subsection{Performance}
-Efficiency is one of the main reasons why we believe dedicated tools such as mlGeNN are necessary for spike-based ML so it is important to investigate the performance of iyr models both for inference and training.
+Efficiency is one of the main reasons why we believe dedicated tools such as mlGeNN are necessary for spike-based ML so it is important to investigate the performance of our models both for inference and training.
 Figure~\ref{fig:performance} compares the throughput -- the rate that timesteps can be processed at -- of the best performing models identified in the previous section for both training and inference.
 Because e-prop training time is dominated by the time-driven update of synaptic eligibility traces, the ALIF512R architecture trains slower than the ALIF256F-ALIF256R as it has more parameters to update every timestep.
 Furthermore, the sparse ALIF512R and ALIF256F-ALIF256R architectures trains $11\times$and $7\times$ faster than their dense counterparts respectively -- demonstrate how effecitively GeNN can take advantage of sparse connectivity.
