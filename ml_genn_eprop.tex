@@ -182,15 +182,21 @@
 \section{Introduction}
 The development of efficient spiking neural network (SNN) simulators has been a key area of computational neuroscience research for several decades~\citep{carnevale2006neuron, Gewaltig2007, Golosio2021, Akar2019,Yavuz2016}.
 However, the prevalent SNN simulators are not well-suited to the types of models and the workflows required for spike-based machine learning (ML).
-Consequently, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly,eshraghian2021training,Hazan2018,zhao_neko_2021} on top of frameworks such as PyTorch~\citep{paszke2019pytorch} and TensorFlow~\citep{TensorFlow} which allow defining SNNs in an environment that is familiar to ML researchers.
+Consequently, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly,eshraghian2021training,Hazan2018,zhao_neko_2021} on top of frameworks such as PyTorch~\citep{paszke2019pytorch} and TensorFlow~\citep{TensorFlow} which allow the definition of SNNs in a familiar environment for ML researchers.
 In these libraries, the activity of a population of neurons is typically represented as a vector of activations and, for an SNN, this vector is populated with ones for neurons that are spiking and zeros for quiescent neurons. 
-This representation allows using the existing infrastructure of the underlying ML library for SNNs but, as real neurons often spike at comparatively low rates, propagating the activity of inactive neurons through the network leads to many unnecessary computations.
+This representation allows the existing infrastructure of the underlying ML library to be used for SNNs but, as real neurons often spike at comparatively low rates, propagating the activity of inactive neurons through the network leads to many unnecessary computations.
 Additionally, the connections between populations of neurons can be sparse, in particular in biologically inspired SNNs. In standard ML libraries, sparse connections are typically implemented as a weight matrix containing many zeros which leads to further computational inefficiencies.
 
 To avoid these inefficiencies we have developed mlGeNN -- a new library for spike-based ML built on the GPU-optimised sparse data structures and algorithms provided by our GeNN simulator~\citep{Yavuz2016,Knight2018,Knight2021}.
 We previously presented an initial version of mlGeNN~\citep{Turner2022} which provided workflows for converting ANNs trained using TensorFlow~\citep{TensorFlow} into SNNs that could be simulated using GeNN.
 However, while we found that performing inference using our converted SNNs was faster than with competing libraries, SNNs are inherently at a disadvantage for static (image) classification tasks as by their nature they turn a single inference step in an ANN library into SNN dynamics across several, often numerous, timesteps.
-In this paper we introduce a second module of mlGeNN focused on training SNNs from scratch. This allows tackling ML problems that are inherently more suitable for SNNs, for instance classification problems that contain a temporal dimension such as speech or gesture recognition.
+
+In this paper we introduce a new model description API for mlGeNN and functionality to train SNNs from scratch.
+We hope that this will allow users to tackle ML problems that are inherently more suitable for SNNs such as classification problems involving a temporal dimension such as speech or gesture recognition as well as exploring the performance of learning rules such as e-prop~\citep{Bellec2020} and EventProp~\citep{Wunderlich2021}.
+
+To demonstration the value of mlGeNN we also present the results of an architecture exploration in which we use e-prop~\citep{Bellec2020} to train one and two layer SNN classifier models on the DVS gesture dataset~\citep{amir_low_2017}.
+The best architectures found by our exploration achieve classification accuracies which are competitive with recent results for similar shallow architectures~\citep{subramoney2022egru,yin2021accurate}.
+Finally we explore the addition of sparse connectivity to our models and show that this can reduce training time by around $10\times$ while still resulting in competitive classifcation performance.
 
 \section{mlGeNN}
 While fully describing the functionality of mlGeNN is beyond the scope of this paper, in the following sections we present an overview of some of our design decisions and the current feature set of mlGeNN.
@@ -201,7 +207,7 @@ For more information about mlGeNN, we invite readers to visit github and explore
   \includegraphics{figures/dense_accuracy.pdf}
   \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
   All models were trained for 100 epochs with a batch size of 512.
-  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
+  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.\todo{describe notation}}
   \label{fig:dense_accuracy}
 \end{figure*}
 
@@ -242,9 +248,11 @@ with network:
     Connection(a, b, Dense(1.0))
 \end{lstlisting}
 By default, \lstinline{Connection} objects use a `delta' synapse model where the accumulated weight of incoming spikes is directly injected into neurons. 
-However, if a somewhat more realistic model is required, e.g. where inputs are \emph{shaped} to mimic the dynamics of real ion channels, this can be swapped out:
+However, if a somewhat more realistic model is required, e.g. where inputs are \emph{shaped} to mimic the dynamics of real ion channels, this can be swapped out, for example with an single exponential synapse with a time constant of \SI{2}{\milli\second}:
 
-\todo{CONNECTION EXAMPLE MISSING?}
+\begin{lstlisting}[language=Python]
+Connection(a, b, Dense(1.0), Exponential(2.0))
+\end{lstlisting}
 
 While the flexibility to create networks with any topology is very useful, mlGeNN also provides a \lstinline{SequentialNetwork} wrapper class -- inspired by \lstinline{Sequential} models in Keras -- for specifying common feedforward models more tersely:
 \begin{lstlisting}[language=Python]
@@ -375,24 +383,34 @@ The results of this exploration are shown in figures~\ref{fig:sparse_accuracy}~a
 In fact, the best performing sparse versions of both architectures out-perform the two layer EGRU model~\citep{subramoney2022egru}, even though they have a small fraction of the number of parameters.
 The best-performing ALIF512 model -- with \SI{5}{\percent} connectivity in the input connections and \SI{10}{\percent} connectivity in the recurrent connections -- achieves an accuracy of \SI{89.17 \pm 0.57}{\percent} with $60\times$ fewer parameters and the best-performing ALIF256F-ALIF256R model -- with \SI{10}{\percent} connectivity in both feed-forward connections and \SI{1}{\percent} in the recurrent connectivity -- achieves \SI{88.17 \pm 0.57}{\percent} with $88\times$ fewer parameters.
 
-
 \begin{figure}[t]
   \centering
   \includegraphics{figures/performance.pdf}
   \caption{Throughput of inference and training best four models on the DVS gesture dataset~\citep{amir_low_2017}.
+  All GeNN models used ALIF neurons.
   Horizontal dashed line indicates performance required to operate in real-time.
-  GPU training was performed with a batch size of 512 and inference with a batch size of 264 (the full size of the test set).
+  Aside from in 1024F512R architecture, GPU training was performed with a batch size of 512 and inference with a batch size of 264 (the full size of the test set).
+  1024F512R was trained with a batch size of \num{64} to match \citet{yin2021accurate}.
   GPU training and inference were performed on an NVIDIA RTX A5000 GPU with \SI{24}{\giga\byte} of memory.
-  CPU inference was performed on an Intel Xeon Gold 6134 CPU.}
+  CPU inference was performed on an Intel Xeon Gold 6134 CPU.
+  FPTT training throughput was calculated based on the reported~\citep{yin2021accurate} training time of \SI{0.4}{\second} epoch divided by the number of frames~(timesteps) in each example.}
   \label{fig:performance}
 \end{figure}
 
 \subsection{Performance}
-\begin{itemize}
-    \item Training time - compare to FPTT \SI{400}{\milli\second} per frame with batch size 64 on some sort of \SI{24}{\giga\byte} GPU
-    \item Inference time CPU and GPU - compare to real-time
-    \item Show effect of sparsity on performance - slower sparse inference due to lack of parallelism in small model with relatively small batch size due to small testing set.
-\end{itemize}
+Efficiency is one of the main reasons why we believe dedicated tools for spike-based ML such as mlGeNN are necessary so it is important to compare the performance -- both for inference and training -- of models.
+Figure~\ref{fig:performance} compares the throughput -- the rate that timesteps can be processed at -- of the best performing models identified in the previous section for both training and inference.
+
+\todo{training performance}
+\todo{GPU inference bad performance sparsity}
+
+In our previous work~\citep{Knight2022}, we demonstrated that the latency and energy delay product of inference models simulated using GeNN was significantly lower than an equivalent LSTM running on the same hardware.
+This was particularly stark when considering running models on CPUs -- a likely scenario in edge applications -- due to the significantly lower amount of computation required by SNNs compared to LSTMs.
+Figure~\ref{fig:performance} demonstrates that the DVS gesture classification models developed in the previous section also perform well on CPU with the dense models running more than $10\times$ faster than real-time on a workstation CPU, suggesting they would still be capable of running in real-time on a lower-power edge CPU.
+Furthermore, both sparse models offered around double the throughput on CPU compared to their dense counterparts.
+
+Finally, we show the training throughput of a ALIF1024F512R model trained with a batch size of \num{64} to match the architecture described by \citet{yin2021accurate}.
+Although e-prop requires requires time-driven updates of synaptic variables (rather than the event-driven where GeNN has a more significant algorithmic advantage) and these updates are more complex than those required for FPTT, mlGeNN provides over $3.5\times$ the training throughput.
 
 \section{Conclusions}
 We hope that the mlGeNN library described in this paper will be as valuable to the community as it was in generating the results presented here.
