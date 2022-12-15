@@ -291,8 +291,8 @@ class IntegrateFire(Neuron):
 \end{lstlisting}
 
 \subsection{Using models for training and inference}
-Once a network structure has been defined, mlGeNN provides a range of \emph{compilers} to produce GeNN models which can then be used for training or inference.
-The simplest compiler is the \lstinline{InferenceCompiler} which builds a GeNN model with static weights and parallel batching support for efficiently performing inference on an SNN model:
+Once a network has been defined, mlGeNN provides a range of \emph{compilers} to produce GeNN models which can be used for training or inference.
+The simplest compiler is the \lstinline{InferenceCompiler} which builds a GeNN model with static weights and parallel batching support for efficiently performing inference using an SNN model:
 \begin{lstlisting}[language=Python]
 compiler = InferenceCompiler(
     evaluate_timesteps=1500, batch_size=512)
@@ -304,18 +304,19 @@ The resulting \lstinline{compiled_net} object can then be used to evaluate the n
 metrics, _  = compiled_net.evaluate(
     {input: inputs}, {output: labels})
 \end{lstlisting}
-By default, the evaluation method calculates sparse categorical accuracy against the provided labels but mlGeNN also provides alternative metrics for regression tasks and custom metrics can easily be implemented.
-As well as supporting the conversion of trained ANN models to SNNs as described in our previous work~\citep{Turner2022}, mlGeNN now provides an e-prop compiler which can be used to train models with the e-prop learning rule~\citep{Bellec2020}.
+By default, the \lstinline{evaluate} method calculates sparse categorical accuracy against the provided labels but mlGeNN also provides alternative metrics for regression tasks and custom metrics can easily be implemented.
+
+Additionally, mlGeNN also provides an e-prop compiler which can be used to train models with the e-prop learning rule~\citep{Bellec2020} using the implementation described in \citet{Knight2022}.
 This compiler checks the validity of the model and automatically adds the appropriate learning rules to its connections as well as feedback connections and error signal calculation logic:
 \begin{lstlisting}[language=Python]
 compiler = EPropCompiler(
     example_timesteps=1500,
-    losses="sparse_categorical_crossentropy",\textbf
+    losses="sparse_categorical_crossentropy",
     optimiser="adam", batch_size=512)
 
 compiled_net = compiler.compile(network)
 \end{lstlisting}
-Note that here again, loss functions and optimisers with default parameters are specified using strings but these are also fully customisable.
+Note that here again, loss functions and optimisers with default parameters are specified using strings but can also be customised by instantiating appropriate classes.
 After compiling with the \lstinline{EPropCompiler}, the \lstinline{compiled_net} object can then be used to train the network on a dataset:
 
 \begin{lstlisting}[language=Python]
@@ -330,8 +331,8 @@ metrics, _  = compiled_net.train(
   \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on sparse models with ALIF512R architectures and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
   All models were trained for 100 epochs with a batch size of 512.
   Connectivity percentages describe fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
-  ``Input connectivity'' describes connections from input to hidden layer.
-  ``Recurrent connectivity'' describes recurrent connections in hidden layer.}
+  `Input connectivity' describes connections from input to hidden layer.
+  `Recurrent connectivity' describes recurrent connections in hidden layer.}
   \label{fig:sparse_accuracy}
 \end{figure}
 
@@ -341,17 +342,17 @@ metrics, _  = compiled_net.train(
   \caption{Accuracy on the training (A) and testing (B) set of the DVS gesture dataset~\citep{amir_low_2017} on sparse models with ALIF256F-ALIF256R architectures and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
   All models were trained for 100 epochs with a batch size of 512.
   Connectivity percentages describe fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
-  ``Input connectivity'' describes connections from input to first hidden layer.
-  ``Hidden connectivity'' describes \emph{internal} connection from first to second hidden layers (``I'') and recurrent connections in second hidden layer (``R'').}
+  `Input connectivity' describes connections from input to first hidden layer.
+  `Hidden connectivity' describes \emph{internal} connection from first to second hidden layers (`I') and recurrent connections in second hidden layer (`R').}
   \label{fig:two_layer_sparse_accuracy}
 \end{figure*}
 
 \subsection{Recording and debugging}
-One of the challenges of working with SNNs, compared to standard ANNs, is that neurons are stateful so the ability to efficiently record and visualise model state is vital for an efficient workflow.
+One of the challenges of working with SNNs compared to standard ANNs is that spiking neurons are stateful, meaning that the ability to efficiently record and visualise neuronal states over time is vital for understanding model behaviour and debugging.
 Inspired by Keras, mlGeNN has a callback system which -- as well as being used internally to implement progress bars, trigger processes such as weight updates during model training etc -- can be used by the user to configure the recording of state variables and spikes.
 
-\lstinline{VarRecorder} can be used to record a population state variable over time and \lstinline{SpikeRecorder} can be used to efficiently record spikes (using the efficient system described in \citet{Knight2021}).
-For example here, we record the spikes emitted by the first layer \lstinline{a} and the membrane voltages of the second  layer \lstinline{b} of the previous example:
+The \lstinline{VarRecorder} callback can be used to record a population state variable over time and the \lstinline{SpikeRecorder} callback can be used to efficiently record spikes (using the efficient system described in \citet{Knight2021}).
+For example, here we record the spikes emitted by the first layer \lstinline{a} and the membrane voltages of the second  layer \lstinline{b} of the previous example:
 \begin{lstlisting}[language=Python]
 callbacks = [SpikeRecorder(a, key="a_spikes"),
              VarRecorder(b, "V", key="b_v")]
@@ -359,7 +360,7 @@ metrics, cb_data = compiled_net.evaluate(
     {input: inputs}, {output: labels},
     callbacks=callbacks)
 \end{lstlisting}
-The \lstinline{key} strings are used to uniquely identify recorded data produced by callbacks and, after the simulation has completed, allow the user to retrieve the recorded variables from the \lstinline{cb_data} dictionary which is returned when evaluating (or training) the model.
+The \lstinline{key} strings are used to uniquely identify recorded data produced by callbacks and, after the simulation has completed, allow the user to retrieve the recorded variables from the \lstinline{cb_data} dictionary returned by the \lstinline{evaluate} and \lstinline{train} methods of compiled models.
 For example, the membrane voltages emitted by all neurons during the presentation of the first input pattern could be accessed using \lstinline{cb_data["b_v"][0]}.
 
 In machine learning workflows, where models may be trained for millions of timesteps, it is also important to be able to \emph{filter} what data is recorded to particular areas/stages of training to save memory and reduce overheads.
