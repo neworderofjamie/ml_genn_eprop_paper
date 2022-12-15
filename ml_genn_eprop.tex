@@ -237,9 +237,8 @@ with network:
     Connection(a, b, Dense(1.0))
 \end{lstlisting}
 For simplicity, in this example, built-in neuron models with default parameters are specified using strings.
-However, if some of the default model parameters need to be altered, a model is required that does not have default parameters or a model is needed that is not built into mlGeNN, bespoke neuron parametrisations and models can be specified using a \lstinline{Neuron} class instance.
-For example, if the Poisson population in the example needed to emit positive and negative spikes for positive and negative input values and the integrate-and-fire 
-neuron should have a higher firing threshold, a \lstinline{PoissonInput} and \lstinline{IntegrateFire} object can be instatiated by the user like:
+However, if some of the default model parameters need to be altered or a model is required that does not have default parameters or is not built into mlGeNN, bespoke neuron parametrisations and models can be specified by instantiating a class derived from \lstinline{Neuron}.
+For example, if the user wanted the Poisson population in the example to emit positive and negative spikes for positive and negative input values and the integrate-and-fire neuron to have a higher firing threshold, \lstinline{PoissonInput} and \lstinline{IntegrateFire} objects could be instatiated by the user like:
 \begin{lstlisting}[language=Python]
 network = Network()
 with network:
