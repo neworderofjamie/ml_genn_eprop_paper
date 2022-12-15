@@ -405,17 +405,17 @@ The best-performing ALIF512 model -- with \SI{5}{\percent} connectivity in the i
 Efficiency is one of the main reasons why we believe dedicated tools such as mlGeNN are necessary for spike-based ML so it is important to investigate the performance of our models both for inference and training.
 Figure~\ref{fig:performance} compares the throughput -- the rate that timesteps can be processed at -- of the best performing models identified in the previous section for both training and inference.
 Because e-prop training time is dominated by the time-driven update of synaptic eligibility traces, the ALIF512R architecture trains slower than the ALIF256F-ALIF256R as it has more parameters to update every timestep.
-Furthermore, the sparse ALIF512R and ALIF256F-ALIF256R architectures trains $11\times$and $7\times$ faster than their dense counterparts respectively -- demonstrate how effecitively GeNN can take advantage of sparse connectivity.
+Furthermore, the sparse ALIF512R and ALIF256F-ALIF256R architectures train $11\times$and $7\times$ faster respectively than their dense counterparts -- demonstrate how effectively GeNN can take advantage of sparse connectivity.
 
-In our previous work~\citep{Knight2022}, we demonstrated that the latency and energy delay product of inference models simulated using GeNN was significantly lower than an equivalent LSTM running on the same hardware.
-This was particularly stark when considering running models on CPUs -- a likely scenario in edge applications -- due to the significantly lower amount of computation required by SNNs compared to LSTMs.
+In our previous work~\citep{Knight2022}, we demonstrated that the latency and energy delay product of inference models simulated using GeNN were significantly lower than an equivalent LSTM running on the same hardware.
+This was particularly stark when performing inference on CPUs -- a likely scenario in edge applications -- due to the significantly lower amount of computation required by SNNs compared to LSTMs.
 Figure~\ref{fig:performance} demonstrates that the DVS gesture classification models developed in the previous section also perform well on CPU with the dense models running more than $10\times$ faster than real-time on a workstation CPU, suggesting they would still be capable of running in real-time on a lower-power edge CPU.
 Furthermore, both sparse models offered around double the throughput on CPU compared to their dense counterparts.
 However, this performance improvement is not visible for GPU inference.
 Further analysis suggests that this is because, due to the very small size of the DVS gesture test set (\num{264} images), the batch size these models are simulated with is limited which prevents the GPU from being fully occupied as sparse models have less parallelism to exploit compared to their dense counterparts. 
 
 Finally, we show the training throughput of a ALIF1024F512R model trained with a batch size of \num{64} to match the architecture described by \citet{yin2021accurate}.
-Although e-prop requires requires time-driven updates of synaptic eligibility traces (rather than the event-driven where GeNN has a more significant algorithmic advantage) and these updates are more complex than those required for FPTT, mlGeNN provides over $3.5\times$ the training throughput.
+Although e-prop requires time-driven updates of synaptic eligibility traces (rather than the event-driven where GeNN has a more significant algorithmic advantage) and these updates are more complex than those required for FPTT, mlGeNN provides over $3.5\times$ the training throughput.
 
 \section{Conclusions}
 We hope that the mlGeNN library described in this paper will be as valuable to the community as it was in generating the results presented here.
@@ -424,16 +424,14 @@ using mlGeNN is illustrated by the fact that the code used for all
 simulations presented here was less than \num{300} lines whereas, when we used PyGeNN directly in our previous work~\citep{Knight2022} one \num{900} line model was required for training and a seperate \num{500} line model for inference.
 
 The e-prop learning rule is an approximation to gradient descent, both in terms of using a surrogate gradient and in neglecting some terms relating to recurrent connections.
-The results we have presented in this paper demonstrate that this approximate nature of the e-prop learning rule does not necessarily prevent it from offering competitive performance on relatively complex datasets.
-However, e-prop has properties that could be seen as disadvantageous for fast and efficient learning and inference.
-Firstly, e-prop requires time-driven updates of synaptic variables which dominates the time taken to train models.
+The results we have presented in this paper demonstrate that thes approximations do not necessarily prevent e-prop from offering competitive performance on relatively complex datasets.
+However, e-prop has properties that could be seen as disadvantageous for fast and efficient training.
+Firstly, e-prop training requires time-driven updates of synaptic variables which dominates the time taken to train models.
 We demonstrate that by using sparse connectivity, this problem can be reduced and, in initial unpublished experiments, we have found that by combining sparse connectivity with the Deep-R~\citep{Bellec2018a} rewiring rule, much of the performance lost due to the sparser connectivity can be recovered.
 Secondly and unsuprisingly for a visual task, both the original experiments on the DVS gesture dataset~\citep{amir_low_2017} and more recent work using the Decolle and FPTT learning rules~\citep{Kaiser2020,yin2021accurate}, showed that a convolutional SNN can achieve significantly higher performance than shallow recurrent networks.
-However, because the eligibility traces which drive e-prop weight updates are calculated from the product of pre and postsynaptic activity, they cannot be shared across the corresponding synapses in a convolutional layer.
-Each synapse needs individual state variabes.
+However, because the eligibility traces which drive e-prop weight updates are calculated from the product of pre and postsynaptic activity, each synapse needs individual state variabes and they cannot be shared across the corresponding synapses in a convolutional layer.
 Neither the FPPT~\citep{yin2021accurate} learning rule -- where the additional $\bar{\Phi}_t$ state variable only depends on past weights so can be shared -- nor EventProp~\citep{Wunderlich2021} -- which does not require any additional synaptic state -- have these issues so are much more suitable for training convolutional architectures.
-
-Therefore, based on the promising initial results presented by \citet{NowotnyLoss2022}, we are working to develop an mlGeNN compiler for the EventProp~\citep{Wunderlich2021} learning rule which will allow convolutional models to be trained and to reduce training times by taking advantage of temporal sparsity through purely event-driven training.
+Based on the promising initial results presented by \citet{NowotnyLoss2022}, we are working to develop an mlGeNN compiler for the EventProp~\citep{Wunderlich2021} learning rule which will allow convolutional models to be trained and to reduce training times by taking advantage of temporal sparsity through purely event-driven training.
 %%
 %% The acknowledgments section is defined using the "acks" environment
 %% (and NOT an unnumbered section). This ensures the proper
