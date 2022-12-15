@@ -186,7 +186,7 @@
 The development of efficient spiking neural network (SNN) simulators has been a key area of computational neuroscience research for several decades~\citep{carnevale2006neuron, Gewaltig2007, Golosio2021, Akar2019,Yavuz2016}.
 However, the prevalent SNN simulators are not well-suited to the types of models and the workflows required for spike-based machine learning (ML).
 Consequently, many ML researchers have chosen to build libraries~\citep{norse2021, SpikingJelly,eshraghian2021training,Hazan2018,zhao_neko_2021} on top of frameworks such as PyTorch~\citep{paszke2019pytorch} and TensorFlow~\citep{TensorFlow} which allow the definition of SNNs in an environment familiar to ML researchers.
-In these libraries, the activity of a population of neurons is typically represented as a vector of activations and, for an SNN, this vector is populated with ones for neurons that are spiking and zeros for quiescent neurons. 
+In these libraries, the activity of a population of neurons is typically represented as a vector of activations and, for an SNN, this vector is populated with ones for neurons that are spiking and zeros for neurons that are quiescent. 
 This representation allows the existing infrastructure of the underlying ML library to be used for SNNs but, as real neurons often spike at comparatively low rates, propagating the activity of inactive neurons through the network leads to many unnecessary computations.
 Additionally, the connections between populations of neurons can be sparse, in particular in biologically inspired SNNs. In standard ML libraries, sparse connections are typically implemented as a weight matrix containing many zeros which leads to further computational inefficiencies.
 
@@ -195,7 +195,7 @@ We previously presented an initial version of mlGeNN~\citep{Turner2022} which pr
 However, while we found that performing inference using our converted SNNs was faster than with competing libraries, SNNs are inherently at a disadvantage for static (image) classification tasks as, by their nature, they turn a single inference step in an ANN library into SNN dynamics across several (often numerous) timesteps.
 
 In this paper, we introduce a new Keras-inspired model description API for mlGeNN as well as functionality to train SNNs from scratch.
-We hope that this will allow users to tackle ML problems that are inherently more suitable for SNNs such as classification problems involving a temporal dimension such as speech or gesture recognition as well as exploring the performance of learning rules such as e-prop~\citep{Bellec2020} and EventProp~\citep{Wunderlich2021}.
+This will allow users to tackle ML problems that are inherently more suitable for SNNs such as classification problems involving a temporal dimension, for instance speech or gesture recognition. Futhermore, it will enable them to explor the performance of recently published SNN learning rules such as e-prop~\citep{Bellec2020} and EventProp~\citep{Wunderlich2021}.
 
 To demonstration the value of mlGeNN, we also present the results of an architecture exploration in which we use e-prop~\citep{Bellec2020} to train one and two layer SNN classifier models on the DVS gesture dataset~\citep{amir_low_2017}.
 The best architectures found by our exploration achieve classification accuracies which are competitive with recent results for similar shallow architectures~\citep{subramoney2022egru,yin2021accurate}.
