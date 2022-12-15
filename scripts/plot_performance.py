@@ -37,8 +37,9 @@ fptt_fps = TRAIN_EXAMPLES / 0.4
 print(f"Training speedup vs FPTT {train_fps.values[-1] / fptt_fps}")
 print(f"Sparse ALIF512R CPU inference speedup {cpu_test_fps[2] / cpu_test_fps[0]}")
 print(f"Sparse ALIF256F256 CPU inference speedup {cpu_test_fps[3] / cpu_test_fps[1]}")
-print(f"Sparse ALIF512R CPU training speedup {train_fps.values[2] / train_fps.values[0]}")
-print(f"Sparse ALIF256F256 CPU training speedup {train_fps.values[3] / train_fps.values[1]}")
+print(f"Sparse ALIF512R training speedup {train_fps.values[2] / train_fps.values[0]}")
+print(f"Sparse ALIF256F256 training speedup {train_fps.values[3] / train_fps.values[1]}")
+
 # Get configurations
 # **HACK** cos I cba to write a sorting function
 #cconfigurations = np.intersect1d(test_data["Config"].unique(),
