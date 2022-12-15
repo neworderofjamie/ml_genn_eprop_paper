@@ -141,7 +141,7 @@
   Intuitive and easy to use application programming interfaces such as Keras have played a large part in the rapid acceleration of machine learning with artificial neural networks.
   Building on our recent works translating ANNs to SNNs and directly training classifiers with e-prop, we here present the mlGeNN interface as an easy way to define, train and test spiking neural networks on our efficient GPU based GeNN framework.
   We illustrate the use of mlGeNN by investigating the performance of a number of one and two layer recurrent spiking neural networks trained to recognise hand gestures from the DVS gesture dataset with the e-prop learning rule.
-  We find that not only is mlGeNN vastly more convenient to use than the lower level PyGeNN interface, the new freedom to effortlessly and rapidly prototype different network architectures also gave us an unprecendent overview over how e-prop compares to other recently published results on the DVS gesture dataset across architectural details. 
+  We find that not only is mlGeNN vastly more convenient to use than the lower level PyGeNN interface, the new freedom to effortlessly and rapidly prototype different network architectures also gave us an unprecedented overview over how e-prop compares to other recently published results on the DVS gesture dataset across architectural details. 
 \end{abstract}
 
 %%
@@ -195,15 +195,15 @@ We previously presented an initial version of mlGeNN~\citep{Turner2022} which pr
 However, while we found that performing inference using our converted SNNs was faster than with competing libraries, SNNs are inherently at a disadvantage for static (image) classification tasks as, by their nature, they turn a single inference step in an ANN library into SNN dynamics across several (often numerous) timesteps.
 
 In this paper, we introduce a new Keras-inspired model description API for mlGeNN as well as functionality to train SNNs from scratch.
-This will allow users to tackle ML problems that are inherently more suitable for SNNs such as classification problems involving a temporal dimension, for instance speech or gesture recognition. Futhermore, it will enable them to explor the performance of recently published SNN learning rules such as e-prop~\citep{Bellec2020} and EventProp~\citep{Wunderlich2021}.
+This will allow users to tackle ML problems that are inherently more suitable for SNNs such as classification problems involving a temporal dimension, for instance speech or gesture recognition. Furthermore, it will enable them to explore the performance of recently published SNN learning rules such as e-prop~\citep{Bellec2020} and EventProp~\citep{Wunderlich2021}.
 
-To demonstration the value of mlGeNN, we also present the results of an architecture exploration in which we use e-prop~\citep{Bellec2020} to train one and two layer SNN classifier models on the DVS gesture dataset~\citep{amir_low_2017}.
+To demonstrate the value of mlGeNN, we also present the results of an architecture exploration in which we use e-prop~\citep{Bellec2020} to train one and two layer SNN classifier models on the DVS gesture dataset~\citep{amir_low_2017}.
 The best architectures found by our exploration achieve classification accuracies which are competitive with recent results for similar shallow architectures~\citep{subramoney2022egru,yin2021accurate}.
-Finally we explore the addition of sparse connectivity to our models and show that this can reduce training time by around $10\times$ while still achieving competitive classifcation performance.
+Finally we explore the addition of sparse connectivity to our models and show that this can reduce training time by around $10\times$ while still achieving competitive classification performance.
 
 \section{mlGeNN}
 While fully describing the functionality of mlGeNN is beyond the scope of this paper, in the following sections we present an overview of some of our design decisions and the current feature set of mlGeNN.
-For more information about mlGeNN, we invite readers to visit github and explore our online documention~\todo{cite}.
+For more information about mlGeNN, we invite readers to visit github and explore our online documentation~\todo{cite}.
 
 \begin{figure*}[t]
   \centering
@@ -217,15 +217,15 @@ For more information about mlGeNN, we invite readers to visit github and explore
 
 \subsection{Describing models}
 Machine learning frameworks such as PyTorch~\citep{paszke2019pytorch} and TensorFlow~\citep{TensorFlow} are designed to efficiently process directed and acyclical computational graphs.
-In order to express recurrent connectivity within an otherwise directed acylical graph, special recurrent layers are required to `hide' the cyclical nature of the recurrent connectivity.
+In order to express recurrent connectivity within an otherwise directed acyclical graph, special recurrent layers are required to `hide' the cyclical nature of the recurrent connectivity.
 However, when beginning to consider more brain-like models with highly recurrent connectivity, the whole model is likely to become one big recurrent layer which is not likely to be an efficient representation.
 
-By contrast, mlGeNN allows Spiking Neural Networks~(SNNs) with arbitrary topologys to be defined in terms of homogenous groups of neurons described by \lstinline{Population} objects connected together with \lstinline{Connection} objects.
+By contrast, mlGeNN allows Spiking Neural Networks~(SNNs) with arbitrary topologies to be defined in terms of homogeneous groups of neurons described by \lstinline{Population} objects connected together with \lstinline{Connection} objects.
 While this type of model description is common amongst SNN simulators used for computational neuroscience, the key difference in mlGeNN is that -- like in ML frameworks -- the model description is agnostic to how it eventually is going to be trained.
-\lstinline{Connection} objects don't need to provide a model of how it's weights will be trained and additional learning-rule specific structures such as feedback connections do not need to be added by hand.
+\lstinline{Connection} objects don't need to provide a model of how their weights will be trained and additional learning-rule specific structures such as feedback connections do not need to be added by hand.
 
 All populations and connections are owned by a \lstinline{Network} object which acts as a context manager.
-A network with two populations of neurons could be simply created like:
+A network with two populations of neurons could simply be created like:
 
 \begin{lstlisting}[language=Python]
 network = Network()
@@ -238,7 +238,7 @@ with network:
 \end{lstlisting}
 For simplicity, in this example, built-in neuron models with default parameters are specified using strings.
 However, if some of the default model parameters need to be altered or a model is required that does not have default parameters or is not built into mlGeNN, bespoke neuron parametrisations and models can be specified by instantiating a class derived from \lstinline{Neuron}.
-For example, if the user wanted the Poisson population in the example to emit positive and negative spikes for positive and negative input values and the integrate-and-fire neuron to have a higher firing threshold, \lstinline{PoissonInput} and \lstinline{IntegrateFire} objects could be instatiated by the user like:
+For example, if the user wanted the Poisson population in the example to emit positive and negative spikes for positive and negative input values and the integrate-and-fire neuron to have a higher firing threshold, \lstinline{PoissonInput} and \lstinline{IntegrateFire} objects could be instantiated by the user like:
 \begin{lstlisting}[language=Python]
 network = Network()
 with network:
@@ -251,7 +251,7 @@ with network:
     Connection(a, b, Dense(1.0))
 \end{lstlisting}
 By default, \lstinline{Connection} objects use a `delta' synapse model where the accumulated weight of incoming spikes is directly injected into neurons. 
-However, if a somewhat more realistic model is required, e.g. where inputs are \emph{shaped} to mimic the dynamics of real ion channels, this can be swapped out, for example with an single exponential synapse with a time constant of \SI{2}{\milli\second}:
+However, if a somewhat more realistic model is required, e.g. where inputs are \emph{shaped} to mimic the dynamics of real ion channels, this can be swapped out, for example with an exponential synapse with a time constant of \SI{2}{\milli\second}:
 
 \begin{lstlisting}[language=Python]
 Connection(a, b, Dense(1.0), Exponential(2.0))
@@ -328,30 +328,30 @@ metrics, _  = compiled_net.train(
 \begin{figure}[t]
   \centering
   \includegraphics{figures/sparse_accuracy.pdf}
-  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on sparse models with ALIF512R architectures and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
+  \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} using sparse models with ALIF512R architectures (one recurrent hidden layer of 512 adaptive LIF neurons) and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
   All models were trained for 100 epochs with a batch size of 512.
-  Connectivity percentages describe fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
-  `Input connectivity' describes connections from input to hidden layer.
-  `Recurrent connectivity' describes recurrent connections in hidden layer.}
+  Connectivity percentages describe the fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
+  `Input connectivity' describes connections from the input to the hidden layer.
+  `Recurrent connectivity' describes recurrent connections in the hidden layer.}
   \label{fig:sparse_accuracy}
 \end{figure}
 
 \begin{figure*}[t]
   \centering
   \includegraphics{figures/two_layer_sparse_accuracy.pdf}
-  \caption{Accuracy on the training (A) and testing (B) set of the DVS gesture dataset~\citep{amir_low_2017} on sparse models with ALIF256F-ALIF256R architectures and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
+  \caption{Accuracy on the training (A) and testing (B) set of the DVS gesture dataset~\citep{amir_low_2017} on sparse models with ALIF256F-ALIF256R architectures (two hidden layers, one feedforward with 256 adaptive LIF neurons, one recurrent with 256 adaptive LIF neurons) and varying levels of sparsity trained with e-prop~\citep{Bellec2020}.
   All models were trained for 100 epochs with a batch size of 512.
-  Connectivity percentages describe fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
-  `Input connectivity' describes connections from input to first hidden layer.
-  `Hidden connectivity' describes \emph{internal} connection from first to second hidden layers (`I') and recurrent connections in second hidden layer (`R').}
+  Connectivity percentages describe the fixed probability of there being a synapse between any two neurons (with no self connections in the recurrent connectivity).
+  `Input connectivity' describes connections from the input to the first hidden layer.
+  `Hidden connectivity' describes \emph{internal} connection from the first to the second hidden layer (`I') and recurrent connections in the second hidden layer (`R').}
   \label{fig:two_layer_sparse_accuracy}
 \end{figure*}
 
 \subsection{Recording and debugging}
-One of the challenges of working with SNNs compared to standard ANNs is that spiking neurons are stateful, meaning that the ability to efficiently record and visualise neuronal states over time is vital for understanding model behaviour and debugging.
-Inspired by Keras, mlGeNN has a callback system which -- as well as being used internally to implement progress bars, trigger processes such as weight updates during model training etc -- can be used by the user to configure the recording of state variables and spikes.
+One of the challenges of working with SNNs compared to standard ANNs is that spiking neurons are stateful, meaning that the ability to efficiently record and visualise neuronal states over time is vital for understanding model behaviour and for debugging.
+Inspired by Keras, mlGeNN has a callback system which -- as well as being used internally to implement progress bars, triggers processes such as weight updates during model training etc -- can be used by the user to configure the recording of state variables and spikes.
 
-The \lstinline{VarRecorder} callback can be used to record a population state variable over time and the \lstinline{SpikeRecorder} callback can be used to efficiently record spikes (using the efficient system described in \citet{Knight2021}).
+The \lstinline{VarRecorder} callback can be used to record a population state variable over time and the \lstinline{SpikeRecorder} callback can be used to record spikes (using the efficient system described in \citet{Knight2021}).
 For example, here we record the spikes emitted by the first layer \lstinline{a} and the membrane voltages of the second  layer \lstinline{b} of the previous example:
 \begin{lstlisting}[language=Python]
 callbacks = [SpikeRecorder(a, key="a_spikes"),
@@ -364,7 +364,10 @@ The \lstinline{key} strings are used to uniquely identify recorded data produced
 For example, the membrane voltages emitted by all neurons during the presentation of the first input pattern could be accessed using \lstinline{cb_data["b_v"][0]}.
 
 In machine learning workflows, where models may be trained for millions of timesteps, it is also important to be able to \emph{filter} what data is recorded to particular areas/stages of training to save memory and reduce overheads.
-Both \lstinline{SpikeRecorder} and \lstinline{VarRecorder} support filtering by neuron or example, e.g. \\ \lstinline{SpikeRecorder(a, neuron=np.s_[0::2])} could be used to record spikes from every other neuron and \lstinline{SpikeRecorder(a, example_filter=1000)} could be used to only record during the 1000th example.
+Both \lstinline{SpikeRecorder} and \lstinline{VarRecorder} support
+filtering by neuron or example, e.g. the syntax
+\lstinline{SpikeRecorder(a, neuron=numpy.s_[0::2])} could be used to
+record spikes from every other neuron and, in a similar vein, the command \lstinline{SpikeRecorder(a, example_filter=1000)} could be used to only record during the 1000th example.
 
 \section{Results}
 In order to demonstrate the value of mlGeNN for spike-based ML research, in the following section we present the results of an exploration of SNN architectures, trained using e-prop~\citep{Bellec2020} on the DVS gesture dataset~\citep{amir_low_2017} -- which has recently been used to evaluate EGRU~\citep{subramoney2022egru} models and the FPTT~\citep{yin2021accurate} learning rule.
@@ -374,12 +377,12 @@ While mlGeNN does not depend on Tonic, it includes a \lstinline{preprocess_tonic
 
 \subsection{Accuracy}
 Figure~\ref{fig:dense_accuracy} shows the accuracy of a wide selection of one and two layer classifier models trained with e-prop.
-These include configurations with and without recurrent connections and using both Adaptive and standard Leaky Integrate-and-Fire~(ALIF and LIF) neuron models.
+These include configurations with and without recurrent connections and using both adaptive and standard Leaky Integrate-and-Fire~(ALIF and LIF) neuron models.
 Of the single layer classifiers, the variant with a single layer of 512 recurrently connected ALIF neurons achieves the highest accuracy of \SI{89.55 \pm 1.22}{\percent} on the test set.
 Although this model only has a single hidden layer and around \num{1.3E6} parameters, it out-performs a two layer EGRU model~\citep{subramoney2022egru} with over $4\times$ as many parameters which achieved \SI{88.02}{\percent} accuracy.
 
 Models using ALIF neurons also achieve higher accuracies than those using simpler LIF neurons in all of the two layer configurations.
-Interestingly, like the architecture employed by \citet{yin2021accurate}, the best performing model -- with a test accuracy of \SI{91.00 \pm 1}{\percent} -- has a feedforward first layer followed by a recurrent second layer rather than two recurrently connected layers.
+Interestingly, like the architecture employed by \citet{yin2021accurate}, the best performing model -- with a test accuracy of \SI{91.00 \pm 1}{\percent} -- has a feedforward first layer followed by a recurrent second layer rather than two recurrent layers.
 While this performance is slightly lower than the \SI{91.89 \pm 0.16}{\percent} reported by \citet{yin2021accurate}, our model has approximately a third the number of parameters (\num{0.66e6} vs \num{1.8e6}).
 
 One of the significant advantages of mlGeNN is that it can exploit sparse connectivity to reduce training and inference time so, in the final part of our architectural exploration, we explore the effect of sparsity on the performance of our two best performing architectures (ALIF512R and ALIF256F-ALIF256R).
@@ -390,10 +393,10 @@ The best-performing ALIF512 model -- with \SI{5}{\percent} connectivity in the i
 \begin{figure}[t]
   \centering
   \includegraphics{figures/performance.pdf}
-  \caption{Throughput of inference and training best four models on the DVS gesture dataset~\citep{amir_low_2017}.
+  \caption{Throughput of inference and training of the best four models on the DVS gesture dataset~\citep{amir_low_2017}.
   All GeNN models used ALIF neurons.
-  Horizontal dashed line indicates performance required to operate in real-time.
-  Aside from in 1024F512R architecture, GPU training was performed with a batch size of 512 and inference with a batch size of 264 (the full size of the test set).
+  The horizontal dashed line indicates the performance required to operate in real-time.
+  Aside from for the 1024F512R architecture, GPU training was performed with a batch size of 512 and inference with a batch size of 264 (the full size of the test set).
   1024F512R was trained with a batch size of \num{64} to match \citet{yin2021accurate}.
   GPU training and inference were performed on an NVIDIA RTX A5000 GPU with \SI{24}{\giga\byte} of memory.
   CPU inference was performed on an Intel Xeon Gold 6134 CPU.
@@ -402,36 +405,34 @@ The best-performing ALIF512 model -- with \SI{5}{\percent} connectivity in the i
 \end{figure}
 
 \subsection{Performance}
-Efficiency is one of the main reasons why we believe dedicated tools such as mlGeNN are necessary for spike-based ML so it is important to investigate the performance of our models both for inference and training.
+Efficiency is one of the main reasons why we believe dedicated tools such as mlGeNN are necessary for spike-based ML so it is important to investigate the computational speed of our models both for inference and training.
 Figure~\ref{fig:performance} compares the throughput -- the rate that timesteps can be processed at -- of the best performing models identified in the previous section for both training and inference.
-Because e-prop training time is dominated by the time-driven update of synaptic eligibility traces, the ALIF512R architecture trains slower than the ALIF256F-ALIF256R as it has more parameters to update every timestep.
-Furthermore, the sparse ALIF512R and ALIF256F-ALIF256R architectures train $11\times$and $7\times$ faster respectively than their dense counterparts -- demonstrate how effectively GeNN can take advantage of sparse connectivity.
+Because e-prop training time is dominated by the time-driven update of synaptic eligibility traces, the ALIF512R architecture trains slower than the ALIF256F-ALIF256R architecture as it has more parameters to update every timestep.
+Furthermore, the sparse ALIF512R and ALIF256F-ALIF256R architectures train $11\times$ and $7\times$ faster respectively than their dense counterparts -- demonstrating how effectively GeNN can take advantage of sparse connectivity.
 
-In our previous work~\citep{Knight2022}, we demonstrated that the latency and energy delay product of inference models simulated using GeNN were significantly lower than an equivalent LSTM running on the same hardware.
+In our previous work~\citep{Knight2022}, we showed that the latency and energy delay product of inference models simulated using GeNN were significantly lower than for an equivalent LSTM running on the same hardware.
 This was particularly stark when performing inference on CPUs -- a likely scenario in edge applications -- due to the significantly lower amount of computation required by SNNs compared to LSTMs.
 Figure~\ref{fig:performance} demonstrates that the DVS gesture classification models developed in the previous section also perform well on CPU with the dense models running more than $10\times$ faster than real-time on a workstation CPU, suggesting they would still be capable of running in real-time on a lower-power edge CPU.
 Furthermore, both sparse models offered around double the throughput on CPU compared to their dense counterparts.
 However, this performance improvement is not visible for GPU inference.
-Further analysis suggests that this is because, due to the very small size of the DVS gesture test set (\num{264} images), the batch size these models are simulated with is limited which prevents the GPU from being fully occupied as sparse models have less parallelism to exploit compared to their dense counterparts. 
+Further analysis suggests that this is because, due to the very small size of the DVS gesture test set (\num{264} images), the batch size that these models are simulated with is limited, which prevents the GPU from being fully occupied because sparse models have less parallelism to exploit compared to their dense counterparts. 
 
-Finally, we show the training throughput of a ALIF1024F512R model trained with a batch size of \num{64} to match the architecture described by \citet{yin2021accurate}.
-Although e-prop requires time-driven updates of synaptic eligibility traces (rather than the event-driven where GeNN has a more significant algorithmic advantage) and these updates are more complex than those required for FPTT, mlGeNN provides over $3.5\times$ the training throughput.
+Finally, we show the training throughput of an ALIF1024F512R model trained with a batch size of \num{64} to match the architecture described by \citet{yin2021accurate}.
+Although e-prop requires time-driven updates of synaptic eligibility traces (rather than event-driven updates for which GeNN has a more significant algorithmic advantage) and these updates are more complex than those required for FPTT, mlGeNN provides over $3.5\times$ the training throughput.
 
 \section{Conclusions}
 We hope that the mlGeNN library described in this paper will be as valuable to the community as it was in generating the results presented here.
-While it is by no means a precise measure, the simplicity and ease of
-using mlGeNN is illustrated by the fact that the code used for all
-simulations presented here was less than \num{300} lines whereas, when we used PyGeNN directly in our previous work~\citep{Knight2022} one \num{900} line model was required for training and a seperate \num{500} line model for inference.
+While it is by no means a precise measure, the simplicity and ease of using mlGeNN is illustrated by the fact that the code used for all simulations presented here was less than \num{300} lines whereas, when we used PyGeNN directly in our previous work~\citep{Knight2022} one \num{900} line model was required for training and a separate \num{500} line model for inference.
 
 The e-prop learning rule is an approximation to gradient descent, both in terms of using a surrogate gradient and in neglecting some terms relating to recurrent connections.
-The results we have presented in this paper demonstrate that thes approximations do not necessarily prevent e-prop from offering competitive performance on relatively complex datasets.
+The results we have presented in this paper demonstrate that these approximations do not necessarily prevent e-prop from offering competitive performance on relatively complex datasets.
 However, e-prop has properties that could be seen as disadvantageous for fast and efficient training.
 Firstly, e-prop training requires time-driven updates of synaptic variables which dominates the time taken to train models.
-We demonstrate that by using sparse connectivity, this problem can be reduced and, in initial unpublished experiments, we have found that by combining sparse connectivity with the Deep-R~\citep{Bellec2018a} rewiring rule, much of the performance lost due to the sparser connectivity can be recovered.
-Secondly and unsuprisingly for a visual task, both the original experiments on the DVS gesture dataset~\citep{amir_low_2017} and more recent work using the Decolle and FPTT learning rules~\citep{Kaiser2020,yin2021accurate}, showed that a convolutional SNN can achieve significantly higher performance than shallow recurrent networks.
-However, because the eligibility traces which drive e-prop weight updates are calculated from the product of pre and postsynaptic activity, each synapse needs individual state variabes and they cannot be shared across the corresponding synapses in a convolutional layer.
-Neither the FPPT~\citep{yin2021accurate} learning rule -- where the additional $\bar{\Phi}_t$ state variable only depends on past weights so can be shared -- nor EventProp~\citep{Wunderlich2021} -- which does not require any additional synaptic state -- have these issues so are much more suitable for training convolutional architectures.
-Based on the promising initial results presented by \citet{NowotnyLoss2022}, we are working to develop an mlGeNN compiler for the EventProp~\citep{Wunderlich2021} learning rule which will allow convolutional models to be trained and to reduce training times by taking advantage of temporal sparsity through purely event-driven training.
+We have demonstrated that by using sparse connectivity, this problem can be reduced and, in initial unpublished experiments, we have found that by combining sparse connectivity with the Deep-R~\citep{Bellec2018a} rewiring rule, much of the performance lost due to the sparser connectivity can be recovered.
+Secondly and unsurprisingly for a visual task, both the original experiments on the DVS gesture dataset~\citep{amir_low_2017} and more recent work using the Decolle and FPTT learning rules~\citep{Kaiser2020,yin2021accurate}, showed that a convolutional SNN can achieve significantly higher performance than shallow recurrent networks.
+However, because the eligibility traces which drive e-prop weight updates are calculated from the product of pre and postsynaptic activity, each synapse needs individual state variables and they cannot be shared across the corresponding synapses in a convolutional layer.
+Neither the FPTT~\citep{yin2021accurate} learning rule -- where the additional $\bar{\Phi}_t$ state variable only depends on past weights so can be shared -- nor EventProp~\citep{Wunderlich2021} -- which does not require any additional synaptic state -- have these issues so are much more suitable for training convolutional architectures.
+Based on the promising initial results presented by \citet{NowotnyLoss2022}, we are working to develop an mlGeNN compiler for the EventProp~\citep{Wunderlich2021} learning rule which will allow convolutional models to be trained and training times to be reduced by taking advantage of temporal sparsity through purely event-driven training.
 %%
 %% The acknowledgments section is defined using the "acks" environment
 %% (and NOT an unnumbered section). This ensures the proper
