@@ -230,7 +230,7 @@ for a in [one_layer_sparse_train_axis, one_layer_sparse_test_axis]:
     a.set_xticks(range(3))
     a.set_xticklabels(sparsities)
 
-one_layer_sparse_fig.tight_layout(pad=0)
+one_layer_sparse_fig.tight_layout(pad=0.3)
 
 # **YUCK** split two layer sparse config strings back into seperate strings
 two_layer_sparse_config_split = two_layer_sparse_df["sparse_config"].str.split("-", expand=True)
@@ -261,7 +261,7 @@ for a in [two_layer_sparse_train_axis, two_layer_sparse_test_axis]:
     a.set_xticks(range(9))
     a.set_xticklabels([f"I:{i}\nR:{j}" for i, j in product(sparsities, repeat=2)])
 
-two_layer_sparse_fig.tight_layout(pad=0)        
+two_layer_sparse_fig.tight_layout(pad=1.4)
 
 
 if not plot_settings.presentation and not plot_settings.poster:
