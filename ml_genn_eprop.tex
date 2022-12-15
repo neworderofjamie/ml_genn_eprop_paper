@@ -207,7 +207,8 @@ For more information about mlGeNN, we invite readers to visit github and explore
   \includegraphics{figures/dense_accuracy.pdf}
   \caption{Accuracy on the testing and training set of the DVS gesture dataset~\citep{amir_low_2017} on one (A) and two (B) layer classifiers trained with e-prop~\citep{Bellec2020}.
   All models were trained for 100 epochs with a batch size of 512.
-  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.\todo{describe notation}}
+  X-axis labels describe the model architecture with the neuron model used for each layer, its size and whether it is connected in a purely feedforward~(F) manner or whether it has recurrent connections~(R).
+  Bars signify the mean and error bars the standard deviation of 5 models trained with different seeds.}
   \label{fig:dense_accuracy}
 \end{figure*}
 
@@ -400,17 +401,18 @@ The best-performing ALIF512 model -- with \SI{5}{\percent} connectivity in the i
 \subsection{Performance}
 Efficiency is one of the main reasons why we believe dedicated tools for spike-based ML such as mlGeNN are necessary so it is important to compare the performance -- both for inference and training -- of models.
 Figure~\ref{fig:performance} compares the throughput -- the rate that timesteps can be processed at -- of the best performing models identified in the previous section for both training and inference.
-
-\todo{training performance}
-\todo{GPU inference bad performance sparsity}
+Because e-prop training time is dominated by the time-driven update of synaptic eligibility traces, the ALIF512R architecture trains slower than the ALIF256F-ALIF256R as it has more parameters to update every timestep.
+Furthermore, the sparse ALIF512R and ALIF256F-ALIF256R architectures trains $11\times$and $7\times$ faster than their dense counterparts respectively -- demonstrate how effecitively GeNN can take advantage of sparse connectivity.
 
 In our previous work~\citep{Knight2022}, we demonstrated that the latency and energy delay product of inference models simulated using GeNN was significantly lower than an equivalent LSTM running on the same hardware.
 This was particularly stark when considering running models on CPUs -- a likely scenario in edge applications -- due to the significantly lower amount of computation required by SNNs compared to LSTMs.
 Figure~\ref{fig:performance} demonstrates that the DVS gesture classification models developed in the previous section also perform well on CPU with the dense models running more than $10\times$ faster than real-time on a workstation CPU, suggesting they would still be capable of running in real-time on a lower-power edge CPU.
 Furthermore, both sparse models offered around double the throughput on CPU compared to their dense counterparts.
+However, this performance improvement is not visible for GPU inference.
+Further analysis suggests that this is because, due to the very small size of the DVS gesture test set (\num{264} images), the batch size these models are simulated with is limited which prevents the GPU from being fully occupied as sparse models have less parallelism to exploit compared to their dense counterparts. 
 
 Finally, we show the training throughput of a ALIF1024F512R model trained with a batch size of \num{64} to match the architecture described by \citet{yin2021accurate}.
-Although e-prop requires requires time-driven updates of synaptic variables (rather than the event-driven where GeNN has a more significant algorithmic advantage) and these updates are more complex than those required for FPTT, mlGeNN provides over $3.5\times$ the training throughput.
+Although e-prop requires requires time-driven updates of synaptic eligibility traces (rather than the event-driven where GeNN has a more significant algorithmic advantage) and these updates are more complex than those required for FPTT, mlGeNN provides over $3.5\times$ the training throughput.
 
 \section{Conclusions}
 We hope that the mlGeNN library described in this paper will be as valuable to the community as it was in generating the results presented here.
