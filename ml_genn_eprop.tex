@@ -192,14 +192,14 @@ Additionally, the connections between populations of neurons can be sparse, in p
 
 To avoid these inefficiencies we have developed mlGeNN -- a new library for spike-based ML built on the GPU-optimised sparse data structures and algorithms provided by our GeNN simulator~\citep{Yavuz2016,Knight2018,Knight2021}.
 We previously presented an initial version of mlGeNN~\citep{Turner2022} which provided workflows for converting ANNs trained using TensorFlow~\citep{TensorFlow} into SNNs that could be simulated using GeNN.
-However, while we found that performing inference using our converted SNNs was faster than with competing libraries, SNNs are inherently at a disadvantage for static (image) classification tasks as by their nature they turn a single inference step in an ANN library into SNN dynamics across several, often numerous, timesteps.
+However, while we found that performing inference using our converted SNNs was faster than with competing libraries, SNNs are inherently at a disadvantage for static (image) classification tasks as, by their nature, they turn a single inference step in an ANN library into SNN dynamics across several (often numerous) timesteps.
 
-In this paper we introduce a new model description API for mlGeNN and functionality to train SNNs from scratch.
+In this paper, we introduce a new Keras-inspired model description API for mlGeNN as well as functionality to train SNNs from scratch.
 We hope that this will allow users to tackle ML problems that are inherently more suitable for SNNs such as classification problems involving a temporal dimension such as speech or gesture recognition as well as exploring the performance of learning rules such as e-prop~\citep{Bellec2020} and EventProp~\citep{Wunderlich2021}.
 
-To demonstration the value of mlGeNN we also present the results of an architecture exploration in which we use e-prop~\citep{Bellec2020} to train one and two layer SNN classifier models on the DVS gesture dataset~\citep{amir_low_2017}.
+To demonstration the value of mlGeNN, we also present the results of an architecture exploration in which we use e-prop~\citep{Bellec2020} to train one and two layer SNN classifier models on the DVS gesture dataset~\citep{amir_low_2017}.
 The best architectures found by our exploration achieve classification accuracies which are competitive with recent results for similar shallow architectures~\citep{subramoney2022egru,yin2021accurate}.
-Finally we explore the addition of sparse connectivity to our models and show that this can reduce training time by around $10\times$ while still resulting in competitive classifcation performance.
+Finally we explore the addition of sparse connectivity to our models and show that this can reduce training time by around $10\times$ while still achieving competitive classifcation performance.
 
 \section{mlGeNN}
 While fully describing the functionality of mlGeNN is beyond the scope of this paper, in the following sections we present an overview of some of our design decisions and the current feature set of mlGeNN.
