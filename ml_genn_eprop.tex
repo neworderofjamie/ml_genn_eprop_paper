@@ -203,7 +203,7 @@ Finally we explore the addition of sparse connectivity to our models and show th
 
 \section{mlGeNN}
 While fully describing the functionality of mlGeNN is beyond the scope of this paper, in the following sections we present an overview of some of our design decisions and the current feature set of mlGeNN.
-For more information about mlGeNN, we invite readers to visit github and explore our online documentation~\todo{cite}.
+For more information about mlGeNN, we invite readers to visit \url{https://github.com/genn-team/ml_genn/} and explore our online documentation~\citep{mlgenn_docs}.
 
 \begin{figure*}[t]
   \centering
@@ -266,7 +266,7 @@ with network:
               readout="spike_count")
 \end{lstlisting}
 Finally, in the same way that Keras can easily be extended by subclassing built-in classes and implementing new functionality using TensorFlow constructs, mlGeNN can be extended by subclassing  built-in classes and providing PyGeNN model descriptions. 
-A full overview over the model description syntax is beyond the scope of this work but is described in more detail in our documentation~\todo{cite} and previous work~\citep{Knight2021}.
+A full overview over the model description syntax is beyond the scope of this work but is described in more detail in our documentation~\citep{mlgenn_docs} and previous work~\citep{Knight2021}.
 Nonetheless, the following example illustrates how a minimal Integrate-and-Fire neuron model could be defined for use in mlGeNN:
 \begin{lstlisting}[language=Python]
 genn_model = {
@@ -374,6 +374,7 @@ In order to demonstrate the value of mlGeNN for spike-based ML research, in the 
 This dataset consists of \num{1342} recordings of \num{11} different hand and arm gestures, collected from \num{29} subjects under three different lighting condition using a DVS 128 event-based camera~\citep{lichtsteiner_128times128_2008}.
 We used the Tonic library~\citep{lenz_gregor_2021_5079802} to access and spatially downsample the dataset to $32\times32$ resolution.
 While mlGeNN does not depend on Tonic, it includes a \lstinline{preprocess_tonic_spikes} helper function which converts spike trains from Tonic datasets into mlGeNN's internal format.
+All code used to generate the results in this section is publically available at \url{https://github.com/neworderofjamie/ml_genn_eprop_paper}.
 
 \subsection{Accuracy}
 Figure~\ref{fig:dense_accuracy} shows the accuracy of a wide selection of one and two layer classifier models trained with e-prop.

@@ -47,7 +47,7 @@ print(f"Sparse ALIF256F256 training speedup {train_fps.values[3] / train_fps.val
 configurations = ["512R", "256F256R", "512R sparse",
                   "256F256R sparse", "1024F512R"]
 
-fig, axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
+fig, axis = plt.subplots(figsize=(plot_settings.column_width, 1.7))
 
 pal = sns.color_palette()
 bar_x = np.arange(len(configurations)) * GROUP_PAD
@@ -74,7 +74,7 @@ axis.set_xticklabels([c.replace(" ", "\n") for c in configurations])
 fig.legend([train, fptt, inference_gpu, inference_cpu],
            ["GeNN Train", "FPTT train", "GeNN GPU inference", "GeNN CPU inference"],
            loc="lower center", ncol=2, frameon=False)
-fig.tight_layout(pad=0, rect=[0.0, 0.2, 1.0, 1.0])
+fig.tight_layout(pad=0, rect=[0.0, 0.225, 1.0, 1.0])
 
 if not plot_settings.presentation and not plot_settings.poster:
     fig.savefig("../figures/performance.pdf")
