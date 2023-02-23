@@ -1,6 +1,8 @@
 import os
 import numpy as np
+import matplotlib.colors as colors
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import plot_settings
 import seaborn as sns 
 
@@ -50,7 +52,6 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     # Create two column figure
     fig, train_axis = plt.subplots(figsize=(width, height))
 
-
     # **YUCK** the only way I can figure out to make the colorbar the same height as the imshows is to use an AxesDivider. However
     # using this with a figure created with two panels and sharey breaks the y-axis. Instead we need to use the axes divider to create all axes
     divider = make_axes_locatable(train_axis)
@@ -62,17 +63,33 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     colorbar_axis = divider.append_axes("right", size=cmap_size, pad=0.05)
 
     # Plot train and test performance heatmaps
-    imshow_kwargs = {"vmin": 70, "vmax": 100, "interpolation": "nearest", "cmap": "Reds", "origin": "lower"}
+    pcolor_kwargs = {"vmin": 70, "vmax": 100, "cmap": "Reds",
+                     "edgecolors": "white", "linewidths": 0.5, "linestyle": "--"}#, "norm": colors.PowerNorm(1.5)}
     
     # Reshape heatmaps to 2D
     if len(train_heat.shape) > 2:
         train_heat = np.reshape(train_heat, (len(lookup), -1))
     if len(test_heat.shape) > 2:
         test_heat = np.reshape(test_heat, (len(lookup), -1))
-    
-    im = train_axis.imshow(train_heat, **imshow_kwargs)
-    test_axis.imshow(test_heat, **imshow_kwargs)
 
+    im = train_axis.pcolor(train_heat, **pcolor_kwargs)
+    test_axis.pcolor(test_heat, **pcolor_kwargs)
+
+    # Find index of best test performance
+    best_test = np.unravel_index(np.argmax(test_heat), test_heat.shape)
+    
+    # Create a Rectangle patch
+    rect = patches.Rectangle((best_test[1], best_test[0]), 1.0, 1.0, 
+                             linewidth=1, edgecolor="white", facecolor="none")
+    # Add the patch to the Axes
+    test_axis.add_patch(rect)
+    
+    # Add text showing accuracy
+    test_axis.text(best_test[1] + 0.5, best_test[0] + 0.5,
+                   f"{test_heat[best_test]:.2f}%",
+                   color="white", ha="center", va="center", size=6)
+    
+    
     # Add color bar
     fig.colorbar(im, cax=colorbar_axis, orientation="vertical")
 
@@ -219,7 +236,7 @@ one_layer_sparse_train_axis.set_ylabel("Input connectivity")
 
 # Set y tick labels
 sparsities = ["1%", "5%", "10%"]
-one_layer_sparse_train_axis.set_yticks(range(3))
+one_layer_sparse_train_axis.set_yticks(np.linspace(0.5, 2.5, 3))
 one_layer_sparse_train_axis.set_yticklabels(sparsities)
 one_layer_sparse_test_axis.set_yticks([])
 
@@ -227,7 +244,7 @@ for a in [one_layer_sparse_train_axis, one_layer_sparse_test_axis]:
     a.set_xlabel("Recurrent connectivity")
     
     # Set x tick labels
-    a.set_xticks(range(3))
+    a.set_xticks(np.linspace(0.5, 2.5, 3))
     a.set_xticklabels(sparsities)
 
 one_layer_sparse_fig.tight_layout(pad=0.3)
@@ -249,7 +266,7 @@ two_layer_sparse_fig, two_layer_sparse_train_axis, two_layer_sparse_test_axis =\
 
 # Set y tick labels
 two_layer_sparse_train_axis.set_ylabel("Input connectivity")
-two_layer_sparse_train_axis.set_yticks(range(3))
+two_layer_sparse_train_axis.set_yticks(np.linspace(0.5, 2.5, 3))
 two_layer_sparse_train_axis.set_yticklabels(sparsities)
 two_layer_sparse_test_axis.set_yticks([])
 
@@ -258,7 +275,7 @@ for a in [two_layer_sparse_train_axis, two_layer_sparse_test_axis]:
     a.set_xlabel("Hidden connectivity")
     
     # Set x tick labels
-    a.set_xticks(range(9))
+    a.set_xticks(np.linspace(0.5, 8.5, 9))
     a.set_xticklabels([f"I:{i}\nR:{j}" for i, j in product(sparsities, repeat=2)])
 
 two_layer_sparse_fig.tight_layout(pad=1.4)
