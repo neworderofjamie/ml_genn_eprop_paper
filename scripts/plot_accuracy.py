@@ -11,7 +11,7 @@ from pandas import DataFrame, NamedAgg
 from glob import glob
 from itertools import product
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from pandas import read_csv
+from pandas import concat, read_csv
 
 
 BAR_WIDTH = 1.0
@@ -280,10 +280,27 @@ for a in [two_layer_sparse_train_axis, two_layer_sparse_test_axis]:
 
 two_layer_sparse_fig.tight_layout(pad=1.4)
 
+best_accuracy_fig, best_accuracy_axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
+
+# Concatenate together best configurations and transpose to return to original format
+best_data = concat([best_one_layer_dense, best_two_layer_dense,
+                    best_one_layer_sparse, best_two_layer_sparse], axis=1)
+best_data = best_data.transpose()
+tick_labels = [f"{conf}\n{sp_conf}" if sp else f"{conf}\nDense"
+               for conf, sp_conf, sp in zip(best_data["config"],
+                                            best_data["sparse_config"],
+                                            best_data["sparse"])]
+train_actor, test_actor = plot_accuracy_bars(best_data, best_accuracy_axis)
+best_accuracy_axis.set_xticklabels(tick_labels, size=5.5)
+best_accuracy_axis.set_ylabel("Accuracy [%]")
+best_accuracy_axis.set_ylim((80.0, 100.0))
+best_accuracy_fig.legend([train_actor, test_actor], ["Train", "Test"], 
+                         ncol=2, loc="lower center", frameon=False)
+best_accuracy_fig.tight_layout(pad=0, rect=[0.0, 0.125, 1.0, 1.0])
 
 if not plot_settings.presentation and not plot_settings.poster:
     dense_fig.savefig("../figures/dense_accuracy.pdf")
     one_layer_sparse_fig.savefig("../figures/sparse_accuracy.pdf")
     two_layer_sparse_fig.savefig("../figures/two_layer_sparse_accuracy.pdf")
-
+    best_accuracy_fig.savefig("../figures/best_accuracy.pdf")
 plt.show()
