@@ -67,14 +67,14 @@ axis.axhline(1000.0, linestyle="--", color="gray")
 sns.despine(ax=axis)
 axis.xaxis.grid(False)
 axis.set_yscale("log")
-axis.set_ylabel("Timesteps per second")
+axis.set_ylabel("Timesteps per second", size=("small" if plot_settings.poster else None))
 axis.set_xticks(bar_x + BAR_PAD)
 axis.set_xticklabels([c.replace(" ", "\n") for c in configurations])
 
 fig.legend([train, fptt, inference_gpu, inference_cpu],
            ["GeNN Train", "FPTT train", "GeNN GPU inference", "GeNN CPU inference"],
            loc="lower center", ncol=2, frameon=False)
-fig.tight_layout(pad=0, rect=[0.0, 0.225, 1.0, 1.0])
+fig.tight_layout(pad=0, rect=[0.0, (0.0 if plot_settings.poster else 0.225), 1.0, 1.0])
 
 if not plot_settings.presentation and not plot_settings.poster:
     fig.savefig("../figures/performance.pdf")

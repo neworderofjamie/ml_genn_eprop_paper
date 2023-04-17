@@ -188,6 +188,9 @@ df = df.agg(mean_test_accuracy=NamedAgg(column="test_accuracy", aggfunc=np.mean)
             mean_train_time=NamedAgg(column="train_time", aggfunc=np.mean),
             sd_train_time=NamedAgg(column="train_time", aggfunc=np.std))
 
+print(f"{len(df[df['sparse'] == False])} dense configurations")
+print(f"{len(df[df['sparse'] == True])} sparse configurations")
+
 # Split dataframe into one and two layer configurations for dense and sparse
 one_layer_dense_df = df[(df["num_layers"] == 1) & (df["sparse"] == False)]
 two_layer_dense_df = df[(df["num_layers"] == 2) & (df["sparse"] == False)]
@@ -291,12 +294,13 @@ tick_labels = [f"{conf}\n{sp_conf}" if sp else f"{conf}\nDense"
                                             best_data["sparse_config"],
                                             best_data["sparse"])]
 train_actor, test_actor = plot_accuracy_bars(best_data, best_accuracy_axis)
-best_accuracy_axis.set_xticklabels(tick_labels, size=5.5)
+best_accuracy_axis.set_xticklabels(tick_labels, size=(15.0 if plot_settings.poster else 5.5))
 best_accuracy_axis.set_ylabel("Accuracy [%]")
 best_accuracy_axis.set_ylim((80.0, 100.0))
 best_accuracy_fig.legend([train_actor, test_actor], ["Train", "Test"], 
                          ncol=2, loc="lower center", frameon=False)
-best_accuracy_fig.tight_layout(pad=0, rect=[0.0, 0.125, 1.0, 1.0])
+best_accuracy_fig.tight_layout(pad=0, rect=[0.0, (0.0 if plot_settings.poster else 0.125),
+                                            1.0, 1.0])
 
 if not plot_settings.presentation and not plot_settings.poster:
     dense_fig.savefig("../figures/dense_accuracy.pdf")
