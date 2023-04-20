@@ -21,19 +21,44 @@ GROUP_PAD = 2.5
 def plot_accuracy_bars(df, axis):
     pal = sns.color_palette()
     bar_x = np.arange(df.shape[0]) * GROUP_PAD
-    
+
     # Show bars for train and test accuracy
     train = axis.bar(bar_x, df["mean_train_accuracy"], yerr=df["sd_train_accuracy"],
-             width=BAR_WIDTH, color=pal[0])
+                     width=BAR_WIDTH, color=pal[0])
     test = axis.bar(bar_x + BAR_PAD, df["mean_test_accuracy"], yerr=df["sd_test_accuracy"],
-             width=BAR_WIDTH, color=pal[1])
-    
+                    width=BAR_WIDTH, color=pal[1])
+
     # Remove axis junk
     sns.despine(ax=axis)
     axis.xaxis.grid(False)
-    
+
     axis.set_xticks(bar_x + (BAR_PAD / 2))
     return train, test
+
+def plot_test_accuracy_bars(df, axis, extra_refs={}):
+    pal = sns.color_palette()
+    bar_x = np.arange(df.shape[0] + len(extra_refs)) * BAR_PAD
+
+    # Show bars for test accuracy
+    test = axis.bar(bar_x[:df.shape[0]], df["mean_test_accuracy"], yerr=df["sd_test_accuracy"],
+                    width=BAR_WIDTH, color=pal[0])
+
+    extra_ref_actors = {}
+    for i, (pal_idx, perf) in enumerate(extra_refs.items()):
+        if isinstance(perf, tuple):
+            extra_ref_actors[pal_idx] = axis.bar([(df.shape[0] + i) * BAR_PAD], [perf[0]], yerr=[perf[1]],
+                                                 width=BAR_WIDTH, color=pal[pal_idx])
+        else:
+            extra_ref_actors[pal_idx] = axis.bar([(df.shape[0] + i) * BAR_PAD], [perf],
+                                                 width=BAR_WIDTH, color=pal[pal_idx])
+    # Remove axis junk
+    sns.despine(ax=axis)
+    axis.xaxis.grid(False)
+
+    axis.set_xticks(bar_x)
+
+    return test, extra_ref_actors
+
 
 def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     # Loop through all two layer sparsity configurations
@@ -42,7 +67,6 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     train_heat = np.zeros([len(lookup)] * len(sparsity_series))
     for i in sparsity_series[0].index:
         # Use lookup dictionary to calculate index
-        # **THINK** list of tuples!
         index = tuple(lookup[int(s.loc[i])] for s in sparsity_series)
 
         # Copy mean test and train accuracies into heatamp
@@ -65,7 +89,7 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     # Plot train and test performance heatmaps
     pcolor_kwargs = {"vmin": 70, "vmax": 100, "cmap": "Reds",
                      "edgecolors": "white", "linewidths": 0.5, "linestyle": "--"}#, "norm": colors.PowerNorm(1.5)}
-    
+
     # Reshape heatmaps to 2D
     if len(train_heat.shape) > 2:
         train_heat = np.reshape(train_heat, (len(lookup), -1))
@@ -77,19 +101,18 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
 
     # Find index of best test performance
     best_test = np.unravel_index(np.argmax(test_heat), test_heat.shape)
-    
+
     # Create a Rectangle patch
     rect = patches.Rectangle((best_test[1], best_test[0]), 1.0, 1.0, 
                              linewidth=1, edgecolor="white", facecolor="none")
     # Add the patch to the Axes
     test_axis.add_patch(rect)
-    
+
     # Add text showing accuracy
     test_axis.text(best_test[1] + 0.5, best_test[0] + 0.5,
                    f"{test_heat[best_test]:.2f}%",
                    color="white", ha="center", va="center", size=6 if plot_settings.paper else "small")
-    
-    
+
     # Add color bar
     fig.colorbar(im, cax=colorbar_axis, orientation="vertical")
 
@@ -102,7 +125,7 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
         sns.despine(ax=a)
         a.xaxis.grid(False)
         a.yaxis.grid(False)
-    
+
     return fig, train_axis, test_axis
 
 # Dictionary to hold data
@@ -114,13 +137,13 @@ data = {"config": [], "sparse": [], "sparse_config": [], "num_layers": [], "seed
 for name in glob(os.path.join("results", "test_output_*.csv")):
     # Split name of test filename into components seperated by _
     name_components = os.path.splitext(os.path.basename(name))[0].split("_")
-    
+
     # **YUCK** dvs-gesture should probably not be _ delimited - stops this generalising
     num_components = len(name_components)
     assert ((num_components - 8) % 5) == 0
-    
+
     num_layers = (num_components - 8) // 5
-    
+
     layer_size_component_begin = 8
     layer_recurrent_component_begin = layer_size_component_begin + num_layers
     layer_model_component_begin = layer_recurrent_component_begin + num_layers
@@ -136,10 +159,10 @@ for name in glob(os.path.join("results", "test_output_*.csv")):
         model = name_components[layer_model_component_begin + i]
         input_sparsity = name_components[layer_input_sparsity_component_begin + i]
         recurrent_sparsity = name_components[layer_recurrent_sparsity_component_begin + i]
-        
+
         if input_sparsity != "1.0" or recurrent_sparsity != "1.0":
             sparse = True
-        
+
         # **YUCK** not really happy with larger configurations so skip
         if int(size) > 512:
             skip = True
@@ -149,7 +172,7 @@ for name in glob(os.path.join("results", "test_output_*.csv")):
 
     # Read test output CSV
     test_data = read_csv(name, delimiter=",")
-    
+
     if "Epoch" in test_data:
         last_epoch_test_data = test_data[test_data["Epoch"] == 99]
     else:
@@ -212,17 +235,29 @@ print(f"Best two layer sparse config:{best_two_layer_sparse['config']} {best_two
 dense_fig, dense_axes = plt.subplots(1, 2, sharey=True,
                                      figsize=(plot_settings.double_column_width, 2.0))
 
-train_actor, test_actor = plot_accuracy_bars(one_layer_dense_df, dense_axes[0])
-plot_accuracy_bars(two_layer_dense_df, dense_axes[1])
-dense_axes[0].set_xticklabels(one_layer_dense_df["config"], rotation=90)
-dense_axes[1].set_xticklabels(two_layer_dense_df["config"], rotation=90)
+if plot_settings.paper:
+    train_actor, test_actor = plot_accuracy_bars(one_layer_dense_df, dense_axes[0])
+    plot_accuracy_bars(two_layer_dense_df, dense_axes[1])
+    dense_fig.legend([train_actor, test_actor], ["Train", "Test"],
+                    ncol=2, loc="lower left", frameon=False)
+    dense_axes[0].set_xticklabels(one_layer_dense_df["config"], rotation=90)
+    dense_axes[1].set_xticklabels(two_layer_dense_df["config"], rotation=90)
+else:
+    plot_test_accuracy_bars(one_layer_dense_df, dense_axes[0])
+    plot_test_accuracy_bars(two_layer_dense_df, dense_axes[1], {1: 88.02, 2: (91.89, 0.16)})
+
+    dense_axes[0].set_xticklabels(one_layer_dense_df["config"], rotation=90)
+    dense_axes[1].set_xticklabels(list(two_layer_dense_df["config"]) + ["EGRU 512R512R*", "FPTT 1024F512R**"], rotation=90)
+
+
 dense_axes[0].set_title("A", loc="left")
 dense_axes[1].set_title("B", loc="left")
 dense_axes[0].set_ylabel("Accuracy [%]")
 dense_axes[0].set_ylim((80.0, 100.0))
-dense_fig.legend([train_actor, test_actor], ["Train", "Test"], 
-                 ncol=2, loc="lower left", frameon=False)
+
 dense_fig.tight_layout(pad=0)
+if not plot_settings.paper:
+    dense_fig.subplots_adjust(bottom=0.4)
 
 # **YUCK** split one layer sparse config strings back into seperate strings
 one_layer_sparsity = one_layer_sparse_df["sparse_config"].str.split(",", expand=True)
@@ -246,7 +281,7 @@ one_layer_sparse_test_axis.set_yticks([])
 
 for a in [one_layer_sparse_train_axis, one_layer_sparse_test_axis]:
     a.set_xlabel("Recurrent connectivity")
-    
+
     # Set x tick labels
     a.set_xticks(np.linspace(0.5, 2.5, 3))
     a.set_xticklabels(sparsities)
@@ -277,7 +312,7 @@ two_layer_sparse_test_axis.set_yticks([])
 # Loop through image axes
 for a in [two_layer_sparse_train_axis, two_layer_sparse_test_axis]:
     a.set_xlabel("Hidden connectivity")
-    
+
     # Set x tick labels
     a.set_xticks(np.linspace(0.5, 8.5, 9))
     a.set_xticklabels([f"I:{i}\nR:{j}" for i, j in product(sparsities, repeat=2)])
