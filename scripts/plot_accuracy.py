@@ -43,8 +43,8 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     for i in sparsity_series[0].index:
         # Use lookup dictionary to calculate index
         # **THINK** list of tuples!
-        index = [(lookup[int(s.loc[i])],) for s in sparsity_series]
-    
+        index = tuple(lookup[int(s.loc[i])] for s in sparsity_series)
+
         # Copy mean test and train accuracies into heatamp
         test_heat[index] = df.loc[i]["mean_test_accuracy"]
         train_heat[index] = df.loc[i]["mean_train_accuracy"]
@@ -76,7 +76,6 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     test_axis.pcolor(test_heat, **pcolor_kwargs)
 
     # Find index of best test performance
-    print(test_heat)
     best_test = np.unravel_index(np.argmax(test_heat), test_heat.shape)
     
     # Create a Rectangle patch
