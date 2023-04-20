@@ -3,6 +3,7 @@ import sys
 
 presentation = "presentation" in sys.argv[1:]
 poster = "poster" in sys.argv[1:]
+paper = not presentation and not poster
 
 # Set the plotting style
 if presentation:

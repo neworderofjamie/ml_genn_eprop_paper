@@ -76,6 +76,7 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     test_axis.pcolor(test_heat, **pcolor_kwargs)
 
     # Find index of best test performance
+    print(test_heat)
     best_test = np.unravel_index(np.argmax(test_heat), test_heat.shape)
     
     # Create a Rectangle patch
@@ -87,7 +88,7 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
     # Add text showing accuracy
     test_axis.text(best_test[1] + 0.5, best_test[0] + 0.5,
                    f"{test_heat[best_test]:.2f}%",
-                   color="white", ha="center", va="center", size=6)
+                   color="white", ha="center", va="center", size=6 if plot_settings.paper else "small")
     
     
     # Add color bar
@@ -95,7 +96,8 @@ def plot_accuracy_heatmap(df, width, height, cmap_size, *sparsity_series):
 
     train_axis.set_title("A", loc="left")
     test_axis.set_title("B", loc="left")
-        
+    test_axis.set_aspect("equal")
+    train_axis.set_aspect("equal")
     # Loop through image axes
     for a in [train_axis, test_axis]:
         sns.despine(ax=a)
@@ -281,7 +283,8 @@ for a in [two_layer_sparse_train_axis, two_layer_sparse_test_axis]:
     a.set_xticks(np.linspace(0.5, 8.5, 9))
     a.set_xticklabels([f"I:{i}\nR:{j}" for i, j in product(sparsities, repeat=2)])
 
-two_layer_sparse_fig.tight_layout(pad=1.4)
+two_layer_sparse_fig.tight_layout(pad=1.4, rect=[0.0, 0.0,
+                                                 1.0, 0.8])
 
 best_accuracy_fig, best_accuracy_axis = plt.subplots(figsize=(plot_settings.column_width, 2.0))
 
@@ -294,12 +297,12 @@ tick_labels = [f"{conf}\n{sp_conf}" if sp else f"{conf}\nDense"
                                             best_data["sparse_config"],
                                             best_data["sparse"])]
 train_actor, test_actor = plot_accuracy_bars(best_data, best_accuracy_axis)
-best_accuracy_axis.set_xticklabels(tick_labels, size=(15.0 if plot_settings.poster else 5.5))
+best_accuracy_axis.set_xticklabels(tick_labels, size=(5.5 if plot_settings.paper else 15.0))
 best_accuracy_axis.set_ylabel("Accuracy [%]")
 best_accuracy_axis.set_ylim((80.0, 100.0))
 best_accuracy_fig.legend([train_actor, test_actor], ["Train", "Test"], 
                          ncol=2, loc="lower center", frameon=False)
-best_accuracy_fig.tight_layout(pad=0, rect=[0.0, (0.0 if plot_settings.poster else 0.125),
+best_accuracy_fig.tight_layout(pad=0, rect=[0.0, (0.125 if plot_settings.paper else 0.0),
                                             1.0, 1.0])
 
 if not plot_settings.presentation and not plot_settings.poster:
