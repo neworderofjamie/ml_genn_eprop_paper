@@ -125,7 +125,7 @@ parser.add_argument("--kernel-profiling", action="store_true", help="Output kern
 parser.add_argument("--test-all", action="store_true", help="Test all checkpoints up to num epochs")
 parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
 parser.add_argument("--num-epochs", type=int, default=50, help="Number of training epochs")
-parser.add_argument("--dataset", choices=["smnist", "shd", "dvs_gesture", "mnist"], required=True)
+parser.add_argument("--dataset", choices=["smnist", "shd", "ssc", "dvs_gesture", "mnist"], required=True)
 parser.add_argument("--seed", type=int, default=1234)
 parser.add_argument("--resume-epoch", type=int, default=None)
 
@@ -170,6 +170,8 @@ unique_suffix = "_".join(("_".join(str(i) for i in val) if isinstance(val, list)
 # If dataset is MNIST
 spikes = []
 labels = []
+validation_spikes = None
+validation_labels = None
 num_input = None
 num_output = None
 if args.dataset == "mnist":
@@ -184,13 +186,26 @@ if args.dataset == "mnist":
         20.0, 51)
 # Otherwise
 else:
-    from tonic.datasets import DVSGesture, SHD, SMNIST
+    from tonic.datasets import DVSGesture, SHD, SMNIST, SSC
     from tonic.transforms import Compose, Downsample
 
     # Load Tonic datasets
     if args.dataset == "shd":
         dataset = SHD(save_to='./data', train=args.train)
         sensor_size = dataset.sensor_size
+    elif args.dataset == "ssc":
+        dataset = SSC(save_to='./data', split="train" if args.train else "test")
+        sensor_size = dataset.sensor_size
+
+        validate_dataset = SSC(save_to='./data', split="valid")
+
+        # Preprocess spike
+        validation_spikes = []
+        validation_labels = []
+        for events, label in validate_dataset:
+            validation_spikes.append(preprocess_tonic_spikes(events, dataset.ordering,
+                                                             sensor_size))
+            validation_labels.append(label)
     elif args.dataset == "smnist":
         dataset = tonic.datasets.SMNIST(save_to='./data', train=args.train, 
                                         duplicate=False, num_neurons=79)
@@ -210,6 +225,7 @@ else:
         spikes.append(preprocess_tonic_spikes(events, dataset.ordering,
                                               sensor_size))
         labels.append(label)
+
 
 # Determine max spikes and latest spike time
 max_spikes = calc_max_spikes(spikes)
@@ -300,6 +316,8 @@ if args.train:
                      ConnectivityCheckpoint(serialiser)]
         metrics, _  = compiled_net.train({input: spikes},
                                          {output: labels},
+                                         validation_x=None if validation_spikes is None else {input: validation_spikes},
+                                         validation_y=None if validation_labels is None else {output: validation_labels},
                                          num_epochs=args.num_epochs,
                                          callbacks=callbacks, shuffle=True,
                                          start_epoch=start_epoch)
