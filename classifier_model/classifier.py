@@ -164,7 +164,7 @@ args.hidden_recurrent_sparsity = pad_hidden_layer_argument(args.hidden_recurrent
 unique_suffix = "_".join(("_".join(str(i) for i in val) if isinstance(val, list) 
                          else str(val))
                          for arg, val in vars(args).items()
-                         if arg not in ["train", "cpu", "resume_epoch",
+                         if arg not in ["train", "device_id", "cpu", "resume_epoch",
                                         "test_all", "kernel_profiling"])
 
 # If dataset is MNIST
@@ -314,15 +314,23 @@ if args.train:
                      CSVTrainLog(f"train_output_{unique_suffix}.csv", output,
                                  args.resume_epoch is not None),
                      ConnectivityCheckpoint(serialiser)]
-        metrics, _  = compiled_net.train({input: spikes},
-                                         {output: labels},
-                                         validation_x=None if validation_spikes is None else {input: validation_spikes},
-                                         validation_y=None if validation_labels is None else {output: validation_labels},
-                                         num_epochs=args.num_epochs,
-                                         callbacks=callbacks, shuffle=True,
-                                         start_epoch=start_epoch)
+
+        if validation_spikes is None or validation_labels is None:
+            metrics, _  = compiled_net.train({input: spikes},
+                                            {output: labels},
+                                            num_epochs=args.num_epochs,
+                                            callbacks=callbacks, shuffle=True,
+                                            start_epoch=start_epoch)
+            print(f"Train accuracy = {100 * metrics[output].result}%")
+        else:
+            train_metrics, validate_metrics, _, _  = compiled_net.train(
+                {input: spikes}, {output: labels},
+                validation_x={input: validation_spikes}, validation_y={output: validation_labels},
+                num_epochs=args.num_epochs, start_epoch=start_epoch,
+                callbacks=callbacks, shuffle=True)
+            print(f"Train accuracy = {100 * train_metrics[output].result}%")
+            print(f"Validation accuracy = {100 * validate_metrics[output].result}%")
         end_time = perf_counter()
-        print(f"Accuracy = {100 * metrics[output].result}%")
         print(f"Time = {end_time - start_time}s")
 else:
     print(f"Loading inference model from checkpoint {args.num_epochs - 1}")
