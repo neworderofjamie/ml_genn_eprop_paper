@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 from pygenn.genn_wrapper.CUDABackend import DeviceSelect_MANUAL
 from ml_genn import Connection, Population, Network
 from ml_genn.callbacks import Callback, Checkpoint
+from ml_genn.communicators import MPI
 from ml_genn.compilers import EPropCompiler, InferenceCompiler
 from ml_genn.connectivity import Dense, FixedProbability
 from ml_genn.initializers import Normal
@@ -85,6 +86,12 @@ def pad_hidden_layer_argument(arg, num_hidden_layers, context, default=None):
     else:
         return arg
 
+def get_dataset_range(dataset, communicator):
+    if communicator is None:
+        return range(len(dataset))
+    else:
+        return range(communicator.rank, len(dataset), communicator.num_ranks)
+
 def inference(genn_kwargs, args, network, serialiser, latest_spike_time, epoch, resume):
     # Load network state from final checkpoint
     network.load((epoch,), serialiser)
@@ -111,7 +118,7 @@ def inference(genn_kwargs, args, network, serialiser, latest_spike_time, epoch, 
         end_time = perf_counter()
         print(f"Accuracy = {100 * metrics[output].result}%")
         print(f"Time = {end_time - start_time}s")
-        
+
         if args.kernel_profiling:
             print(f"Neuron update time = {compiled_net.genn_model.neuron_update_time}")
             print(f"Presynaptic update time = {compiled_net.genn_model.presynaptic_update_time}")
@@ -119,6 +126,7 @@ def inference(genn_kwargs, args, network, serialiser, latest_spike_time, epoch, 
 
 parser = ArgumentParser()
 parser.add_argument("--device-id", type=int, default=0, help="CUDA device ID")
+parser.add_argument("--use-nccl", action="store_true", help="Parallelise using NCCL")
 parser.add_argument("--train", action="store_true", help="Train model")
 parser.add_argument("--cpu", action="store_true", help="Use CPU for inference")
 parser.add_argument("--kernel-profiling", action="store_true", help="Output kernel profiling data")
@@ -164,8 +172,11 @@ args.hidden_recurrent_sparsity = pad_hidden_layer_argument(args.hidden_recurrent
 unique_suffix = "_".join(("_".join(str(i) for i in val) if isinstance(val, list) 
                          else str(val))
                          for arg, val in vars(args).items()
-                         if arg not in ["train", "device_id", "cpu", "resume_epoch",
+                         if arg not in ["train", "use_nccl", "device_id", "cpu", "resume_epoch",
                                         "test_all", "kernel_profiling"])
+
+# Create communicator
+communicator = MPI() if args.use_nccl else None
 
 # If dataset is MNIST
 spikes = []
@@ -180,10 +191,17 @@ if args.dataset == "mnist":
     # Latency encode MNIST digits
     num_input = 28 * 28
     num_output = 10
-    labels = mnist.train_labels() if args.train else mnist.test_labels()
-    spikes = log_latency_encode_data(
-        mnist.train_images() if args.train else mnist.test_images(),
-        20.0, 51)
+    if args.train:
+        if communicator is None:
+            spikes = log_latency_encode_data(mnist.train_images(), 20.0, 51)
+            labels = mnist.train_labels()
+        else:
+            dataset_slice = slice(communicator.rank, -1, communicator.num_ranks)
+            spikes = log_latency_encode_data(mnist.train_images()[dataset_slice], 20.0, 51)
+            labels = mnist.train_labels()[dataset_slice]
+    else:
+        spikes = log_latency_encode_data(mnist.test_images(), 20.0, 51)
+        labels = mnist.test_labels()
 # Otherwise
 else:
     from tonic.datasets import DVSGesture, SHD, SMNIST, SSC
@@ -202,8 +220,9 @@ else:
         # Preprocess spike
         validation_spikes = []
         validation_labels = []
-        for events, label in validate_dataset:
-            validation_spikes.append(preprocess_tonic_spikes(events, dataset.ordering,
+        for i in get_dataset_range(validate_dataset, communicator):
+            events, label = dataset[i]
+            validation_spikes.append(preprocess_tonic_spikes(events, validate_dataset.ordering,
                                                              sensor_size))
             validation_labels.append(label)
     elif args.dataset == "smnist":
@@ -221,7 +240,8 @@ else:
     num_output = len(dataset.classes)
 
     # Preprocess spike
-    for events, label in dataset:
+    for i in get_dataset_range(dataset, communicator):
+        events, label = dataset[i]
         spikes.append(preprocess_tonic_spikes(events, dataset.ordering,
                                               sensor_size))
         labels.append(label)
@@ -303,17 +323,21 @@ if args.train:
     compiler = EPropCompiler(example_timesteps=int(np.ceil(latest_spike_time)),
                              losses="sparse_categorical_crossentropy", rng_seed=args.seed,
                              optimiser="adam", batch_size=args.batch_size, 
-                             kernel_profiling=args.kernel_profiling, **genn_kwargs)
+                             kernel_profiling=args.kernel_profiling, communicator=communicator,
+                             **genn_kwargs)
     compiled_net = compiler.compile(network, name=f"classifier_train_{unique_suffix}")
 
     with compiled_net:
         # Evaluate model on SHD
         start_time = perf_counter()
         start_epoch = 0 if args.resume_epoch is None else (args.resume_epoch + 1)
-        callbacks = ["batch_progress_bar", Checkpoint(serialiser),
-                     CSVTrainLog(f"train_output_{unique_suffix}.csv", output,
-                                 args.resume_epoch is not None),
-                     ConnectivityCheckpoint(serialiser)]
+        if communicator is None or communicator.rank == 0:
+            callbacks = ["batch_progress_bar", Checkpoint(serialiser),
+                        CSVTrainLog(f"train_output_{unique_suffix}.csv", output,
+                                    args.resume_epoch is not None),
+                        ConnectivityCheckpoint(serialiser)]
+        else:
+            callbacks = []
 
         if validation_spikes is None or validation_labels is None:
             metrics, _  = compiled_net.train({input: spikes},
