@@ -221,7 +221,7 @@ else:
         validation_spikes = []
         validation_labels = []
         for i in get_dataset_range(validate_dataset, communicator):
-            events, label = dataset[i]
+            events, label = validate_dataset[i]
             validation_spikes.append(preprocess_tonic_spikes(events, validate_dataset.ordering,
                                                              sensor_size))
             validation_labels.append(label)
