@@ -134,6 +134,7 @@ parser.add_argument("--test-all", action="store_true", help="Test all checkpoint
 parser.add_argument("--batch-size", type=int, default=512, help="Batch size")
 parser.add_argument("--num-epochs", type=int, default=50, help="Number of training epochs")
 parser.add_argument("--dataset", choices=["smnist", "shd", "ssc", "dvs_gesture", "mnist"], required=True)
+parser.add_argument("--dataset-threshold", type=int, default=None, help="Minimum number of events in timestep required to spike")
 parser.add_argument("--seed", type=int, default=1234)
 parser.add_argument("--resume-epoch", type=int, default=None)
 
@@ -243,7 +244,8 @@ else:
     for i in get_dataset_range(dataset, communicator):
         events, label = dataset[i]
         spikes.append(preprocess_tonic_spikes(events, dataset.ordering,
-                                              sensor_size))
+                                              sensor_size, dt=1.0,
+                                              histogram_thresh=args.dataset_threshold))
         labels.append(label)
 
 
