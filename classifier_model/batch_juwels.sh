@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # use project specified via jutil
-#SBATCH --account=structuretofunction
+#SBATCH --account=s2f-neuro-ai
 
 # set the number of nodes
 #SBATCH --nodes=1
