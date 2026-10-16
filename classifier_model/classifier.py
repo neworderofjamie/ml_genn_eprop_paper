@@ -39,13 +39,13 @@ class CSVTrainLog(Callback):
         self.csv_writer.writerow([epoch, m.total, m.correct, 
                                   perf_counter() - self.start_time])
         self.file.flush()
-"""
+
 class Shift:
     def __init__(self, f_shift, sensor_size):
         self.f_shift = f_shift
         self.sensor_size = sensor_size
 
-    def __call__(self, left_events: np.ndarray, right_events: np.ndarray) -> np.ndarray:
+    def __call__(self, events: np.ndarray) -> np.ndarray:
         # Shift events
         events_copy = copy.deepcopy(events)
         events_copy["x"] = events_copy["x"] + np.random.randint(-self.f_shift, self.f_shift)
@@ -57,8 +57,15 @@ class Shift:
             np.where(
                 (events_copy["x"] < 0) | (events_copy["x"] >= self.sensor_size[1])
                 | (events_copy["y"] < 0) | (events_copy["y"] >= self.sensor_size[0])))
-        return events_copy
-"""
+        
+        # Return event copy, split into left and right stream
+        half_width = self.sensor_size[1] // 2
+        left_mask = (events["x"] < half_width)
+        left_events = events_copy[left_mask]
+        right_events = events_copy[np.logical_not(left_mask)]
+        right_events["x"] -= half_width
+        return left_events, right_events
+
 class CSVTestLog(Callback):
     def __init__(self, filename, epoch, output_pop):
         # Create CSV writer
@@ -171,24 +178,25 @@ sensor_size = (32, 32, 2)
 # and round up outputs to power-of-two
 num_half_input = int(sensor_size[0] * (sensor_size[1] // 2) * sensor_size[2])
 num_output = len(dataset.classes)
-#shift = Shift(args.shift, sensor_size)
+shift = Shift(args.shift, sensor_size)
 
 # Add events to list
-raw_left_events = []
-raw_right_events = []
+raw_events = []
 labels = []
 max_spikes = 0
 latest_spike_time = 0
 for events, label in dataset:
-    left_mask = (events["x"] < 16)
-    raw_left_events.append(events[left_mask])
-    raw_right_events.append(events[np.logical_not(left_mask)])
+    raw_events.append(events)
     labels.append(label)
 
-    # Calculate max spikes and max times
-    max_spikes = max(max_spikes, len(raw_left_events[-1]), len(raw_right_events[-1]))
-    latest_spike_time = max(latest_spike_time, np.amax(raw_left_events[-1]["t"]) / 1000.0, 
-                            np.amax(raw_right_events[-1]["t"]) / 1000.0)
+    # Calculate max spikes
+    # **THINK** shifting could break this
+    num_left = sum(events["x"] < 16)
+    num_right = len(events) - num_left
+    max_spikes = max(max_spikes, num_left, num_right)
+
+    # Calculate max times
+    latest_spike_time = max(latest_spike_time, np.amax(events["t"]) / 1000.0)
 
 # Determine max spikes and latest spike time
 print(f"Max spikes {max_spikes}, latest spike time {latest_spike_time}")
@@ -205,21 +213,15 @@ with network:
                             num_half_input)
 
     
-    left_ff = Population(AdaptiveLeakyIntegrateFire(v_thresh=0.6,
-                                                    tau_refrac=5.0,
-                                                    relative_reset=True,
-                                                    integrate_during_refrac=True),
+    left_ff = Population(AdaptiveLeakyIntegrateFire(v_thresh=0.6, tau_refrac=5.0,
+                                                    relative_reset=True, integrate_during_refrac=True),
                          128)
-    right_ff = Population(AdaptiveLeakyIntegrateFire(v_thresh=0.6,
-                                                    tau_refrac=5.0,
-                                                    relative_reset=True,
-                                                    integrate_during_refrac=True),
+    right_ff = Population(AdaptiveLeakyIntegrateFire(v_thresh=0.6, tau_refrac=5.0,
+                                                    relative_reset=True, integrate_during_refrac=True),
                           128)
     
-    recurrent = Population(AdaptiveLeakyIntegrateFire(v_thresh=0.6,
-                                                      tau_refrac=5.0,
-                                                      relative_reset=True,
-                                                      integrate_during_refrac=True),
+    recurrent = Population(AdaptiveLeakyIntegrateFire(v_thresh=0.6, tau_refrac=5.0,
+                                                      relative_reset=True, integrate_during_refrac=True),
                           256)
     
     # Add output population
@@ -230,22 +232,21 @@ with network:
     Connection(left_ff, output, Dense(Normal(sd=1.0 / np.sqrt(left_ff.shape[0]))))
     Connection(right_ff, output, Dense(Normal(sd=1.0 / np.sqrt(right_ff.shape[0]))))
     Connection(recurrent, output, Dense(Normal(sd=1.0 / np.sqrt(recurrent.shape[0]))))
-        
-    
+
     # Connect feedforward layers to input
     in_weight = Normal(sd=1.0 / np.sqrt(num_half_input))
     in_connectivity = (Dense(in_weight) if args.input_sparsity == 1.0 
                        else FixedProbability(args.input_sparsity, in_weight, True))
     Connection(left_input, left_ff, in_connectivity)
     Connection(right_input, right_ff, in_connectivity)
-    
+
     # Connect hidden layers together
     hid_hid_weight = Normal(sd=1.0 / np.sqrt(128))
     hid_hid_connectivity = (Dense(hid_hid_weight) if args.hidden_hidden_sparsity == 1.0 
                             else FixedProbability(args.hidden_hidden_sparsity, hid_hid_weight))
     Connection(left_ff, recurrent, hid_hid_connectivity)
     Connection(right_ff, recurrent, hid_hid_connectivity)
-    
+
     # Connect recurrent layer
     rec_weight = Normal(sd=1.0 / np.sqrt(256)) 
     rec_connectivity = (Dense(rec_weight) if args.recurrent_sparsity == 1.0 
@@ -269,11 +270,25 @@ if args.train:
         callbacks = ["batch_progress_bar", Checkpoint(serialiser),
                      CSVTrainLog(f"train_output_{unique_suffix}.csv", output),
                      ConnectivityCheckpoint(serialiser)]
-        metrics, _  = compiled_net.train({input: spikes},
-                                         {output: labels},
-                                         num_epochs=args.num_epochs,
-                                         callbacks=callbacks, shuffle=True,
-                                         start_epoch=0)
+        for e in range(args.num_epochs):
+            # Loop through raw events
+            left_spikes = []
+            right_spikes = []
+            for r in raw_events:
+                # Apply shift augmentation, splitting result into left and right stream
+                left_events, right_events = shift(r)
+                
+                left_spikes.append(preprocess_tonic_spikes(left_events, dataset.ordering,
+                                                           (sensor_size[0], sensor_size[1] // 2, sensor_size[2])))
+                right_spikes.append(preprocess_tonic_spikes(right_events, dataset.ordering,
+                                                           (sensor_size[0], sensor_size[1] // 2, sensor_size[2])))
+
+            # Train epoch
+            metrics, _  = compiled_net.train(
+                {left_input: left_spikes, right_input: right_spikes}, {output: labels_train},
+                start_epoch=e, num_epochs=1, shuffle=True,
+                callbacks=callbacks)
+
         end_time = perf_counter()
         print(f"Accuracy = {100 * metrics[output].result}%")
         print(f"Time = {end_time - start_time}s")
