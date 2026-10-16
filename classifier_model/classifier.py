@@ -3,7 +3,6 @@ import os
 import numpy as np
 
 from argparse import ArgumentParser
-from pygenn.genn_wrapper.CUDABackend import DeviceSelect_MANUAL
 from ml_genn import Connection, Population, Network
 from ml_genn.callbacks import Callback, Checkpoint
 from ml_genn.compilers import EPropCompiler, InferenceCompiler
@@ -172,7 +171,7 @@ sensor_size = (32, 32, 2)
 # and round up outputs to power-of-two
 num_half_input = int(sensor_size[0] * (sensor_size[1] // 2) * sensor_size[2])
 num_output = len(dataset.classes)
-shift = Shift(args.shift, sensor_size)
+#shift = Shift(args.shift, sensor_size)
 
 # Add events to list
 raw_left_events = []
@@ -194,9 +193,7 @@ for events, label in dataset:
 # Determine max spikes and latest spike time
 print(f"Max spikes {max_spikes}, latest spike time {latest_spike_time}")
 
-genn_kwargs = {"selectGPUByDeviceID": True,
-               "deviceSelectMethod": DeviceSelect_MANUAL,
-               "manualDeviceID": args.device_id}
+genn_kwargs = {}
 
 serialiser = Numpy("checkpoints_" + unique_suffix)
 network = Network()
@@ -226,7 +223,7 @@ with network:
                           256)
     
     # Add output population
-    output = Population(LeakyIntegrate(tau_mem=20.0, readout="sum_var", softmax=args.train),
+    output = Population(LeakyIntegrate(tau_mem=20.0, readout="sum_var"),
                         num_output)
 
     # Add all hidden layer to output layer
@@ -243,7 +240,7 @@ with network:
     Connection(right_input, right_ff, in_connectivity)
     
     # Connect hidden layers together
-    hid_hid_weight = Normal(sd=1.0 / np.sqrt(128.shape[0]))
+    hid_hid_weight = Normal(sd=1.0 / np.sqrt(128))
     hid_hid_connectivity = (Dense(hid_hid_weight) if args.hidden_hidden_sparsity == 1.0 
                             else FixedProbability(args.hidden_hidden_sparsity, hid_hid_weight))
     Connection(left_ff, recurrent, hid_hid_connectivity)
